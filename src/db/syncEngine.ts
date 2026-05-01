@@ -1,83 +1,92 @@
-import { db, type SyncQueueItem } from "./db";
+import { db, type SyncQueueItem, type SyncCollection } from "./db";
 import { databases } from "../lib/appwrite";
 
-// Actual Collection IDs from Appwrite
-const COLLECTION_IDS = {
+// ─── Appwrite Collection IDs ─────────────────────────────────────────────────
+
+const COLLECTION_IDS: Record<SyncCollection, string> = {
   transactions: "69f4b467003790fede5a",
   budgets: "69f4b46e0038f1fd5966",
   recurring: "69f4b473000c148e7eb3",
+  notifications: "", // Add your Appwrite notifications collection ID here when ready
 };
 
 const DATABASE_ID = "69f4b4650016cddc01d3";
+const MAX_RETRIES = 3;
 
-export const syncEngine = {
-  isSyncing: false,
+// ─── Core Sync Logic ─────────────────────────────────────────────────────────
 
-  async startSync() {
-    if (this.isSyncing || !navigator.onLine) return;
-    this.isSyncing = true;
+const processSyncItem = async (item: SyncQueueItem): Promise<void> => {
+  if ((item.retryCount ?? 0) >= MAX_RETRIES) {
+    console.warn(`[Sync] Dropping item ${item.id} after ${MAX_RETRIES} failed retries.`);
+    await db.syncQueue.delete(item.id!);
+    return;
+  }
 
-    try {
-      const queue = await db.syncQueue.orderBy("timestamp").toArray();
+  const collectionId = COLLECTION_IDS[item.collection];
+  if (!collectionId) {
+    // Collection not yet configured in Appwrite — skip silently
+    return;
+  }
 
-      for (const item of queue) {
-        await this.processSyncItem(item);
-      }
-    } catch (error) {
-      console.error("Sync failed:", error);
-    } finally {
-      this.isSyncing = false;
+  try {
+    switch (item.action) {
+      case "create":
+        await databases.createDocument(DATABASE_ID, collectionId, "unique()", item.payload);
+        break;
+      case "update":
+        if (item.payload.id) {
+          await databases.updateDocument(DATABASE_ID, collectionId, item.payload.id, item.payload);
+        }
+        break;
+      case "delete":
+        if (item.payload.id) {
+          await databases.deleteDocument(DATABASE_ID, collectionId, item.payload.id);
+        }
+        break;
     }
-  },
 
-  async processSyncItem(item: SyncQueueItem) {
-    const collectionId = COLLECTION_IDS[item.collection];
-    if (!collectionId) return;
+    // ── Success: remove from queue and mark synced in local DB ──
+    await db.syncQueue.delete(item.id!);
 
-    try {
-      switch (item.action) {
-        case "create":
-          await databases.createDocument(
-            DATABASE_ID,
-            collectionId,
-            "unique()",
-            item.payload,
-          );
-          break;
-        case "update":
-          if (item.payload.id) {
-            await databases.updateDocument(
-              DATABASE_ID,
-              collectionId,
-              item.payload.id,
-              item.payload,
-            );
-          }
-          break;
-        case "delete":
-          if (item.payload.id) {
-            await databases.deleteDocument(
-              DATABASE_ID,
-              collectionId,
-              item.payload.id,
-            );
-          }
-          break;
-      }
+    const localId = (item.payload as { localId?: number }).localId;
+    if (localId === undefined) return;
 
-      // If successful, remove from queue
-      await db.syncQueue.delete(item.id!);
-
-      // If it was a transaction, mark as synced in local DB
-      if (item.collection === "transactions" && item.payload.localId) {
-        await db.transactions.update(item.payload.localId, { isSynced: true });
-      }
-    } catch (error) {
-      console.error(`Failed to sync item ${item.id}:`, error);
-      // We could add retry logic here
+    switch (item.collection) {
+      case "transactions":
+        await db.transactions.update(localId, { isSynced: true });
+        break;
+      case "budgets":
+        await db.budgets.update(localId, { isSynced: true });
+        break;
+      case "recurring":
+        await db.recurring.update(localId, { isSynced: true });
+        break;
+      case "notifications":
+        // notifications don't have an isSynced field – nothing to update
+        break;
     }
-  },
+  } catch (error) {
+    console.error(`[Sync] Failed to process item ${item.id}:`, error);
+    await db.syncQueue.update(item.id!, { retryCount: (item.retryCount ?? 0) + 1 });
+  }
 };
 
-// Listen for network changes
+const startSync = async (): Promise<void> => {
+  if (!navigator.onLine) return;
+
+  try {
+    const queue = await db.syncQueue.orderBy("timestamp").toArray();
+    for (const item of queue) {
+      await processSyncItem(item);
+    }
+  } catch (error) {
+    console.error("[Sync] Sync cycle failed:", error);
+  }
+};
+
+// ─── Public API ──────────────────────────────────────────────────────────────
+
+export const syncEngine = { startSync };
+
+// Trigger sync whenever the browser comes back online
 window.addEventListener("online", () => syncEngine.startSync());

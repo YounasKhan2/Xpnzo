@@ -11,19 +11,30 @@ interface StatCardProps {
   iconBgClass: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, amount, change, icon }) => {
+const StatCard: React.FC<StatCardProps> = ({
+  title,
+  amount,
+  change,
+  icon,
+  iconColorClass,
+  iconBgClass,
+}) => {
   const isPositive = change >= 0;
 
   return (
     <Card padding="md">
       <div className="flex items-start justify-between mb-4">
         <div
-          className={`w-12 h-12 rounded-full flex items-center justify-center {iconBgClass} {iconColorClass}`}
+          className={`w-12 h-12 rounded-full flex items-center justify-center ${iconBgClass} ${iconColorClass}`}
         >
           {icon}
         </div>
         <div
-          className={`flex items-center gap-1 text-sm font-semibold px-2 py-1 rounded-md {isPositive ? 'bg-success-light text-green-700' : 'bg-danger-light text-red-700'}`}
+          className={`flex items-center gap-1 text-sm font-semibold px-2 py-1 rounded-md ${
+            isPositive
+              ? "bg-success-light text-green-700"
+              : "bg-danger-light text-red-700"
+          }`}
         >
           {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
           <span>{Math.abs(change)}%</span>

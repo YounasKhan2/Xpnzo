@@ -63,7 +63,7 @@ const BudgetSummary: React.FC<BudgetSummaryProps> = ({ stats }) => {
           <div className="h-3 w-full bg-primary-dark rounded-full overflow-hidden">
             <div
               className="h-full bg-white rounded-full transition-all duration-1000 ease-out"
-              style={{ width: `{percentage}%` }}
+              style={{ width: `${percentage}%` }}
             />
           </div>
         </div>

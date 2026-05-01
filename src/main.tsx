@@ -4,7 +4,6 @@ import "./index.css";
 import App from "./App.tsx";
 import { registerSW } from 'virtual:pwa-register';
 import { isFragment } from 'react-is';
-
 // Polyfill isFragment for Recharts/React 19 compatibility
 window.isFragment = isFragment;
 

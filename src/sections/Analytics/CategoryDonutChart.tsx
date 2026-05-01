@@ -39,7 +39,7 @@ const CategoryDonutChart: React.FC<CategoryDonutChartProps> = ({ data }) => {
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number | string | undefined) => [
+              formatter={(value: unknown) => [
                 `${Number(value || 0).toFixed(2)}`,
                 "Spent",
               ]}

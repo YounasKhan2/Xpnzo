@@ -76,7 +76,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({
               className="p-4 px-6 flex items-center gap-4 hover:bg-bg/50 transition-colors cursor-pointer"
             >
               <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 {getCategoryColor(tx.category)}`}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${getCategoryColor(tx.category)}`}
               >
                 {getCategoryIcon(tx.category)}
               </div>
@@ -90,7 +90,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({
               </div>
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 <span
-                  className={`text-base font-bold {tx.type === 'income' ? 'text-success' : 'text-text-primary'}`}
+                  className={`text-base font-bold ${tx.type === 'income' ? 'text-success' : 'text-text-primary'}`}
                 >
                   {tx.type === "income" ? "+" : "-"}
                   {tx.amount.toFixed(2)}

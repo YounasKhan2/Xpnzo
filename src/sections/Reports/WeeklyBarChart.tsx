@@ -64,7 +64,7 @@ const WeeklyBarChart: React.FC<WeeklyBarChartProps> = ({ data }) => {
                 border: "none",
                 boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
               }}
-              formatter={(value: number | string | undefined) => [
+              formatter={(value: unknown) => [
                 `${Number(value || 0).toLocaleString()}`,
                 "Expense",
               ]}

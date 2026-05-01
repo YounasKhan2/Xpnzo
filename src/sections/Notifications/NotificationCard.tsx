@@ -1,47 +1,56 @@
 import React from "react";
 import Card from "../../components/Card";
-import type { Notification } from "../../../types/global-types";
+import type { LocalNotification } from "../../db/db";
 import { AlertCircle, Info, Settings, CheckCircle2 } from "lucide-react";
 
-interface NotificationCardProps {
-  notification: Notification;
-  onMarkRead?: (id: string) => void;
-}
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const getIconForType = (type: string) => {
   switch (type) {
-    case "alert":
-      return <AlertCircle size={20} className="text-danger" />;
-    case "info":
-      return <Info size={20} className="text-info" />;
-    case "system":
-      return <Settings size={20} className="text-text-secondary" />;
-    case "success":
-      return <CheckCircle2 size={20} className="text-success" />;
-    default:
-      return <Info size={20} />;
+    case "alert":   return <AlertCircle size={20} className="text-danger" />;
+    case "info":    return <Info size={20} className="text-info" />;
+    case "system":  return <Settings size={20} className="text-text-secondary" />;
+    case "success": return <CheckCircle2 size={20} className="text-success" />;
+    default:        return <Info size={20} />;
   }
 };
 
 const getBgForType = (type: string) => {
   switch (type) {
-    case "alert":
-      return "bg-danger-light";
-    case "info":
-      return "bg-info-light";
-    case "system":
-      return "bg-bg";
-    case "success":
-      return "bg-success-light";
-    default:
-      return "bg-bg";
+    case "alert":   return "bg-danger-light";
+    case "info":    return "bg-info-light";
+    case "system":  return "bg-bg";
+    case "success": return "bg-success-light";
+    default:        return "bg-bg";
   }
 };
 
-const NotificationCard: React.FC<NotificationCardProps> = ({
-  notification,
-  onMarkRead,
-}) => {
+const formatRelativeTime = (updatedAt: number): string => {
+  const diff = Date.now() - updatedAt;
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1)  return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24)   return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
+
+const formatDate = (updatedAt: number): string =>
+  new Date(updatedAt).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+interface NotificationCardProps {
+  notification: LocalNotification;
+  onMarkRead?: (localId: number) => void;
+}
+
+const NotificationCard: React.FC<NotificationCardProps> = ({ notification, onMarkRead }) => {
   return (
     <Card
       padding="md"
@@ -57,9 +66,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
 
       <div className="flex gap-4">
         <div
-          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${getBgForType(
-            notification.type
-          )}`}
+          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${getBgForType(notification.type)}`}
         >
           {getIconForType(notification.type)}
         </div>
@@ -78,9 +85,9 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
             {notification.message}
           </p>
           <div className="flex items-center gap-2 text-xs font-medium text-text-muted">
-            <span>{notification.time}</span>
+            <span>{formatRelativeTime(notification.updatedAt)}</span>
             <span>•</span>
-            <span>{notification.date}</span>
+            <span>{formatDate(notification.updatedAt)}</span>
           </div>
         </div>
       </div>
@@ -89,7 +96,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
         <div className="mt-4 pl-16 flex justify-start">
           <button
             className="text-sm font-semibold text-primary hover:text-primary-hover transition-colors bg-transparent border-none cursor-pointer"
-            onClick={() => onMarkRead(notification.id)}
+            onClick={() => onMarkRead(notification.localId!)}
           >
             Mark as read
           </button>

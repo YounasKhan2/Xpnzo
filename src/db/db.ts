@@ -1,15 +1,19 @@
 import Dexie, { type Table } from "dexie";
-import { mockTransactions, mockBudgets } from "../data/mockData";
 import type {
   BudgetStatus,
   RecurringFrequency,
   TransactionStatus,
   TransactionType,
 } from "../../types/global-types";
+import type { LocalUserSettings } from "../../types/Settings-types";
+
+export type { LocalUserSettings };
+
+// ─── Table Interfaces ────────────────────────────────────────────────────────
 
 export interface LocalTransaction {
-  id?: string; // Appwrite document ID
-  localId?: number; // Auto-incrementing local ID
+  localId?: number;  // Auto-increment PK (local-first)
+  id?: string;       // Appwrite document ID (populated after first sync)
   name: string;
   amount: number;
   category: string;
@@ -25,98 +29,90 @@ export interface LocalTransaction {
 }
 
 export interface LocalBudget {
-  id?: string;
-  localId?: number;
+  localId?: number;  // Auto-increment PK
+  id?: string;       // Appwrite document ID
   category: string;
   limit: number;
   spent: number;
   color: string;
   icon: string;
   status: BudgetStatus;
+  isSynced: boolean;
+  isDeleted: boolean;
   updatedAt: number;
 }
 
 export interface LocalRecurring {
-  id?: string;
-  localId?: number;
+  localId?: number;  // Auto-increment PK
+  id?: string;       // Appwrite document ID
   name: string;
   amount: number;
   frequency: RecurringFrequency;
   nextDate: string;
   category: string;
   isActive: boolean;
+  isSynced: boolean;
+  isDeleted: boolean;
   updatedAt: number;
 }
+
+export interface LocalNotification {
+  localId?: number;  // Auto-increment PK
+  id?: string;       // Appwrite document ID
+  title: string;
+  message: string;
+  type: "alert" | "info" | "system" | "success";
+  isRead: boolean;
+  updatedAt: number;
+}
+
+// ─── Sync Queue ──────────────────────────────────────────────────────────────
+
+export type SyncCollection = "transactions" | "budgets" | "recurring" | "notifications";
 
 export type SyncPayload =
   | Partial<LocalTransaction>
   | Partial<LocalBudget>
-  | Partial<LocalRecurring>;
+  | Partial<LocalRecurring>
+  | Partial<LocalNotification>;
 
 export interface SyncQueueItem {
   id?: number;
   action: "create" | "update" | "delete";
-  collection: "transactions" | "budgets" | "recurring";
+  collection: SyncCollection;
   payload: SyncPayload;
+  retryCount: number;
   timestamp: number;
 }
+
+// ─── Database Class ──────────────────────────────────────────────────────────
+// NOTE: The database was renamed from "XpnzoDB" to "XpnzoDB_2" to force a
+// clean slate after the primary key change (++localId on all tables).
+// IndexedDB does not support changing an object store's primary key in-place,
+// so renaming the DB is the correct resolution during early development when
+// there is no real user data to preserve.
 
 export class XpnzoDatabase extends Dexie {
   transactions!: Table<LocalTransaction>;
   budgets!: Table<LocalBudget>;
   recurring!: Table<LocalRecurring>;
   syncQueue!: Table<SyncQueueItem>;
+  notifications!: Table<LocalNotification>;
+  userSettings!: Table<LocalUserSettings>;
 
   constructor() {
-    super("XpnzoDB");
+    super("XpnzoDB_2");
+
+    // v1 — canonical schema (clean start, all tables use ++localId as PK)
     this.version(1).stores({
-      transactions: "++localId, id, category, date, isSynced, isDeleted",
-      budgets: "id, category",
-      recurring: "++id, name, category, isActive",
-      syncQueue: "++id, collection, timestamp",
+      transactions: "++localId, id, category, date, type, isSynced, isDeleted",
+      budgets:      "++localId, id, category, isSynced, isDeleted",
+      recurring:    "++localId, id, name, category, isActive, isSynced, isDeleted",
+      syncQueue:    "++id, collection, timestamp",
+      notifications:"++localId, id, type, isRead, updatedAt",
+      userSettings: "++localId",
     });
   }
 }
 
 export const db = new XpnzoDatabase();
-
-// Seed function to populate data if empty
-export const seedDatabase = async () => {
-  return db.transaction(
-    "rw",
-    [db.transactions, db.budgets, db.recurring],
-    async () => {
-      const transactionCount = await db.transactions.count();
-      if (transactionCount === 0) {
-        const transactionsToSeed: LocalTransaction[] = mockTransactions.map(
-          (t) => ({
-            ...t,
-            isSynced: true,
-            isDeleted: false,
-            updatedAt: Date.now(),
-          }),
-        );
-        await db.transactions.bulkAdd(transactionsToSeed);
-      }
-
-      const budgetCount = await db.budgets.count();
-      if (budgetCount === 0) {
-        const budgetsToSeed: LocalBudget[] = mockBudgets.map((b) => ({
-          ...b,
-          updatedAt: Date.now(),
-        }));
-        await db.budgets.bulkAdd(budgetsToSeed);
-      }
-
-      const recurringCount = await db.recurring.count();
-      if (recurringCount === 0) {
-        const { mockRecurring } = await import("../data/mockData");
-        const recurringToSeed: LocalRecurring[] = mockRecurring.map((r) => ({
-          ...r,
-          updatedAt: Date.now(),
-        }));
-        await db.recurring.bulkAdd(recurringToSeed);
-      }
-    },
-  );
-};

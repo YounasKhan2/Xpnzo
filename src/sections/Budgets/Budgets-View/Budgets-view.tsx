@@ -41,13 +41,14 @@ const BudgetsView: React.FC = () => {
   }, [budgets, transactions]);
 
   const stats = useMemo(() => {
-    if (!enrichedBudgets) return { totalLimit: 0, totalSpent: 0, remaining: 0 };
+    if (!enrichedBudgets) return { totalBudget: 0, totalLimit: 0, totalSpent: 0, remaining: 0 };
     const totalLimit = enrichedBudgets.reduce((sum, b) => sum + b.limit, 0);
     const totalSpent = enrichedBudgets.reduce((sum, b) => sum + b.spent, 0);
     return {
+      totalBudget: totalLimit,
       totalLimit,
       totalSpent,
-      remaining: totalLimit - totalSpent
+      remaining: totalLimit - totalSpent,
     };
   }, [enrichedBudgets]);
 
@@ -79,7 +80,7 @@ const BudgetsView: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {enrichedBudgets.map((budget) => (
-          <BudgetCard key={budget.id || budget.category} budget={budget} />
+          <BudgetCard key={budget.localId ?? budget.category} budget={budget} />
         ))}
 
         {/* Add New Budget Card placeholder */}

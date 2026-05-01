@@ -1,4 +1,3 @@
-import type {  Budget  } from '../global-types';
 
 export interface BudgetSummaryStats {
   totalLimit: number;

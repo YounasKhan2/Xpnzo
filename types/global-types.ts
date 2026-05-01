@@ -36,7 +36,7 @@ export interface Transaction {
   status: TransactionStatus;
   icon?: string;
   account?: string;
-  notes?: string;
+  note?: string; // unified field name (was "notes" in some places)
 }
 
 export interface Budget {
@@ -62,14 +62,18 @@ export interface RecurringTransaction {
   icon?: string;
 }
 
+// Notification is the cloud/display shape; LocalNotification (in db.ts) is the persisted shape
 export interface Notification {
-  id: string;
+  id?: string;
+  localId?: number;
   title: string;
   message: string;
   type: 'alert' | 'info' | 'system' | 'success';
   isRead: boolean;
-  time: string;
-  date: string;
+  updatedAt?: number;
+  // Legacy display fields – not persisted, computed from updatedAt where needed
+  time?: string;
+  date?: string;
 }
 
 export interface LoginActivity {
