@@ -4,6 +4,7 @@ import Input from "../../components/Input";
 import Button from "../../components/Button";
 import { Mail, Lock } from "lucide-react";
 import { authService } from "../../services/auth";
+import { syncEngine } from "../../db/syncEngine";
 
 interface AuthFormProps {
   type: "login" | "signup";
@@ -30,6 +31,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
       } else {
         await authService.login(email, password);
       }
+      
+      // Pull latest data from Appwrite upon successful login
+      await syncEngine.pullSync();
+      
       navigate("/");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Authentication failed. Please try again.";

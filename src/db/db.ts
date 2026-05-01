@@ -68,13 +68,14 @@ export interface LocalNotification {
 
 // ─── Sync Queue ──────────────────────────────────────────────────────────────
 
-export type SyncCollection = "transactions" | "budgets" | "recurring" | "notifications";
+export type SyncCollection = "transactions" | "budgets" | "recurring" | "notifications" | "userSettings";
 
 export type SyncPayload =
   | Partial<LocalTransaction>
   | Partial<LocalBudget>
   | Partial<LocalRecurring>
-  | Partial<LocalNotification>;
+  | Partial<LocalNotification>
+  | Partial<LocalUserSettings>;
 
 export interface SyncQueueItem {
   id?: number;

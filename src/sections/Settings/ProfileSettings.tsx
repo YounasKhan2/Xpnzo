@@ -4,6 +4,9 @@ import Input from "../../components/Input";
 import Button from "../../components/Button";
 import type { LocalUserSettings } from "../../../types/Settings-types";
 import { db } from "../../db/db";
+import { storage, BUCKET_IDS, Permission, Role } from "../../lib/appwrite";
+import { ID } from "appwrite";
+import { authService } from "../../services/auth";
 
 interface ProfileSettingsProps {
   settings: LocalUserSettings | null;
@@ -20,6 +23,16 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const avatarPreviewUrl = React.useMemo(() => {
+    if (!form.avatar) return "";
+    if (form.avatar.startsWith("data:")) return form.avatar;
+    try {
+      return storage.getFilePreview(BUCKET_IDS.avatars, form.avatar);
+    } catch {
+      return "";
+    }
+  }, [form.avatar]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,20 +67,39 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 800 * 1024) {
-      alert("File is too large. Max size is 800KB.");
+    // We can allow up to 2MB for Appwrite bucket
+    if (file.size > 2 * 1024 * 1024) {
+      alert("File is too large. Max size is 2MB.");
       return;
     }
 
+    // Set local preview instantly
     const reader = new FileReader();
     reader.onloadend = () => {
       setForm({ ...form, avatar: reader.result as string });
     };
     reader.readAsDataURL(file);
+
+    try {
+      // Get current user for permission scoping
+      const user = await authService.getCurrentUser();
+      const permissions = user
+        ? [Permission.read(Role.user(user.$id)), Permission.update(Role.user(user.$id)), Permission.delete(Role.user(user.$id))]
+        : [];
+
+      // Upload to Appwrite Storage with user-scoped permissions
+      const response = await storage.createFile(BUCKET_IDS.avatars, ID.unique(), file, permissions);
+      
+      // Update form with the new fileId
+      setForm((prev) => ({ ...prev, avatar: response.$id }));
+    } catch (error) {
+      console.error("Failed to upload avatar:", error);
+      alert("Failed to upload avatar. Please try again.");
+    }
   };
 
   const handleRemoveAvatar = () => {
@@ -84,8 +116,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
 
       <div className="flex items-center gap-6 mb-8">
         <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white text-2xl font-bold font-heading shadow-md overflow-hidden flex-shrink-0">
-          {form.avatar ? (
-            <img src={form.avatar} alt="Avatar" className="w-full h-full object-cover" />
+          {avatarPreviewUrl ? (
+            <img src={avatarPreviewUrl} alt="Avatar" className="w-full h-full object-cover" />
           ) : (
             initials
           )}
@@ -106,7 +138,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
               Remove
             </Button>
           </div>
-          <p className="text-xs text-text-muted mt-2">JPG, GIF or PNG. Max size of 800K</p>
+          <p className="text-xs text-text-muted mt-2">JPG, GIF or PNG. Max size of 2MB</p>
         </div>
       </div>
 

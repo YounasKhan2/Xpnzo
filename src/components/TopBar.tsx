@@ -1,6 +1,7 @@
-import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import { Search, Bell, Menu, ChevronRight } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { Search, Bell, Menu, ChevronRight, LogOut, Settings, User } from 'lucide-react';
+import { useAuth } from '../lib/useAuth';
 
 // ── Page metadata ─────────────────────────────────────────────────────────────
 const pageMeta: Record<string, { title: string; subtitle: string; breadcrumbs?: string[] }> = {
@@ -22,7 +23,33 @@ interface TopBarProps {
 
 const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const page = pageMeta[location.pathname] ?? { title: 'Xpnzo', subtitle: '', breadcrumbs: ['Home'] };
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Compute initials from user name
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
+
+  const handleLogout = async () => {
+    setDropdownOpen(false);
+    await logout();
+    navigate('/login');
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   return (
     <header className="bg-card border-b border-border sticky top-0 z-30">
@@ -49,7 +76,7 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
 
         {/* Right: search + bell + avatar */}
         <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-          {/* Search — hidden on mobile, shown sm+ */}
+          {/* Search */}
           <div className="relative hidden sm:flex items-center">
             <Search size={15} className="absolute left-3 text-text-muted pointer-events-none" />
             <input
@@ -69,12 +96,56 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
             <span className="absolute top-2 right-2 w-2 h-2 bg-danger rounded-full border-2 border-card" />
           </Link>
 
-          {/* Avatar */}
-          <div
-            className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold cursor-pointer transition-transform duration-150 hover:scale-105 font-heading flex-shrink-0"
-            aria-label="User profile"
-          >
-            <span>JM</span>
+          {/* Avatar + Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setDropdownOpen((o) => !o)}
+              className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold cursor-pointer transition-transform duration-150 hover:scale-105 font-heading flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              aria-label="User menu"
+            >
+              {initials}
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                {/* User info header */}
+                <div className="px-4 py-3 border-b border-border">
+                  <p className="text-sm font-semibold text-text-primary truncate">{user?.name ?? 'User'}</p>
+                  <p className="text-xs text-text-muted truncate">{user?.email}</p>
+                </div>
+
+                {/* Menu items */}
+                <div className="py-1">
+                  <Link
+                    to="/settings"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-secondary hover:bg-bg hover:text-text-primary transition-colors"
+                  >
+                    <User size={15} />
+                    Profile Settings
+                  </Link>
+                  <Link
+                    to="/security"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-secondary hover:bg-bg hover:text-text-primary transition-colors"
+                  >
+                    <Settings size={15} />
+                    Security
+                  </Link>
+                </div>
+
+                {/* Logout */}
+                <div className="border-t border-border py-1">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-danger hover:bg-danger/5 transition-colors"
+                  >
+                    <LogOut size={15} />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -101,3 +172,4 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
 };
 
 export default TopBar;
+
