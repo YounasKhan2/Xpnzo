@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import { Mail, Lock } from "lucide-react";
+import { authService } from "../../services/auth";
 
 interface AuthFormProps {
   type: "login" | "signup";
@@ -13,15 +14,39 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, perform auth logic here
-    navigate("/");
+    setIsLoading(true);
+    setError("");
+
+    try {
+      if (type === "signup") {
+        await authService.register(email, password, name);
+        // Automatically login after signup
+        await authService.login(email, password);
+      } else {
+        await authService.login(email, password);
+      }
+      navigate("/");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Authentication failed. Please try again.";
+      setError(message);
+      console.error("Auth error:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full">
+      {error && (
+        <div className="p-3 text-sm bg-danger-light text-danger rounded-md font-medium">
+          {error}
+        </div>
+      )}
       {type === "signup" && (
         <Input
           label="Full Name"
@@ -64,7 +89,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
         )}
       </div>
 
-      <Button type="submit" variant="primary" fullWidth className="mt-2">
+      <Button type="submit" variant="primary" fullWidth className="mt-2" loading={isLoading}>
         {type === "login" ? "Sign In" : "Create Account"}
       </Button>
     </form>

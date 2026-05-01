@@ -1,22 +1,41 @@
-import React, { useState } from "react";
+import React, { useMemo } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../../../db/db";
 import RecurringTable from "../RecurringTable";
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
-import { mockRecurring } from "../../../data/mockData";
 import { Plus, Wallet, RefreshCw } from "lucide-react";
 
 const RecurringView: React.FC = () => {
-  const [subscriptions, setSubscriptions] = useState(mockRecurring);
+  const subscriptions = useLiveQuery(() => db.recurring.toArray());
 
-  const handleToggleStatus = (id: string, isActive: boolean) => {
-    setSubscriptions((subs) =>
-      subs.map((sub) => (sub.id === id ? { ...sub, isActive } : sub)),
-    );
+  const handleToggleStatus = async (id: string, isActive: boolean) => {
+    await db.recurring.update(id, { isActive, updatedAt: Date.now() });
   };
 
-  const activeMonthlyTotal = subscriptions
-    .filter((s) => s.isActive && s.frequency === "monthly")
-    .reduce((sum, s) => sum + s.amount, 0);
+  const stats = useMemo(() => {
+    if (!subscriptions) return { monthly: 0, yearly: 0 };
+    
+    const activeMonthlyTotal = subscriptions
+      .filter((s) => s.isActive && s.frequency === "monthly")
+      .reduce((sum, s) => sum + s.amount, 0);
+
+    return {
+      monthly: activeMonthlyTotal,
+      yearly: activeMonthlyTotal * 12
+    };
+  }, [subscriptions]);
+
+  if (!subscriptions) {
+    return (
+      <div className="flex flex-col gap-6 opacity-50 animate-pulse">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-32 bg-gray-200 rounded-xl" />
+          <div className="h-32 bg-gray-200 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,7 +58,7 @@ const RecurringView: React.FC = () => {
               Total Monthly Recurring
             </p>
             <h3 className="text-3xl font-bold text-text-primary m-0">
-              {activeMonthlyTotal.toFixed(2)}
+              {stats.monthly.toFixed(2)}
             </h3>
             <p className="text-sm text-text-muted mt-1">
               Based on active subscriptions
@@ -56,7 +75,7 @@ const RecurringView: React.FC = () => {
               Projected Yearly
             </p>
             <h3 className="text-3xl font-bold text-text-primary m-0">
-              {(activeMonthlyTotal * 12).toFixed(2)}
+              {stats.yearly.toFixed(2)}
             </h3>
             <p className="text-sm text-text-muted mt-1">
               If all active subs continue

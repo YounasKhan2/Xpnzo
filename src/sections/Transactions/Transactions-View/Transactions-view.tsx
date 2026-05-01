@@ -1,12 +1,26 @@
 import React, { useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../../../db/db";
 import Button from "../../../components/Button";
 import TransactionTable from "../TransactionTable";
 import AddTransactionModal from "../AddTransactionModal";
-import { mockTransactions } from "../../../data/mockData";
 import { Plus, Filter, Download } from "lucide-react";
 
 const TransactionsView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const transactions = useLiveQuery(() => 
+    db.transactions.orderBy('date').reverse().toArray()
+  );
+
+  if (!transactions) {
+    return (
+      <div className="flex flex-col gap-6 opacity-50 animate-pulse">
+        <div className="h-12 bg-gray-200 rounded-lg w-full" />
+        <div className="h-64 bg-gray-200 rounded-xl w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -72,7 +86,7 @@ const TransactionsView: React.FC = () => {
         </div>
       </div>
 
-      <TransactionTable transactions={mockTransactions} />
+      <TransactionTable transactions={transactions} />
 
       <AddTransactionModal
         isOpen={isModalOpen}

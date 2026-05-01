@@ -1,18 +1,68 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../../../db/db";
 import Button from "../../../components/Button";
 import BudgetCard from "../BudgetCard";
 import BudgetSummary from "../BudgetSummary";
-import { mockBudgets } from "../../../data/mockData";
 import { Plus } from "lucide-react";
 
 const BudgetsView: React.FC = () => {
-  const stats = {
-    totalLimit: mockBudgets.reduce((sum, b) => sum + b.limit, 0),
-    totalSpent: mockBudgets.reduce((sum, b) => sum + b.spent, 0),
-    get remaining() {
-      return this.totalLimit - this.totalSpent;
-    },
-  };
+  const budgets = useLiveQuery(() => db.budgets.toArray());
+  const transactions = useLiveQuery(() => db.transactions.toArray());
+
+  const enrichedBudgets = useMemo(() => {
+    if (!budgets || !transactions) return null;
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    return budgets.map(budget => {
+      const spentThisMonth = transactions
+        .filter(t => 
+          t.category === budget.category && 
+          t.type === 'expense' &&
+          new Date(t.date).getMonth() === currentMonth &&
+          new Date(t.date).getFullYear() === currentYear
+        )
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const percentage = (spentThisMonth / budget.limit) * 100;
+      let status: 'on-track' | 'warning' | 'over-budget' = 'on-track';
+      if (percentage >= 100) status = 'over-budget';
+      else if (percentage >= 80) status = 'warning';
+
+      return {
+        ...budget,
+        spent: spentThisMonth,
+        status
+      };
+    });
+  }, [budgets, transactions]);
+
+  const stats = useMemo(() => {
+    if (!enrichedBudgets) return { totalLimit: 0, totalSpent: 0, remaining: 0 };
+    const totalLimit = enrichedBudgets.reduce((sum, b) => sum + b.limit, 0);
+    const totalSpent = enrichedBudgets.reduce((sum, b) => sum + b.spent, 0);
+    return {
+      totalLimit,
+      totalSpent,
+      remaining: totalLimit - totalSpent
+    };
+  }, [enrichedBudgets]);
+
+  if (!enrichedBudgets) {
+    return (
+      <div className="flex flex-col gap-8 opacity-50 animate-pulse">
+        <div className="h-48 bg-gray-200 rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-48 bg-gray-200 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -28,8 +78,8 @@ const BudgetsView: React.FC = () => {
       <BudgetSummary stats={stats} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {mockBudgets.map((budget) => (
-          <BudgetCard key={budget.id} budget={budget} />
+        {enrichedBudgets.map((budget) => (
+          <BudgetCard key={budget.id || budget.category} budget={budget} />
         ))}
 
         {/* Add New Budget Card placeholder */}

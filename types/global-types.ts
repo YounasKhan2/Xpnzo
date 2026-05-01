@@ -26,9 +26,10 @@ export interface User {
 }
 
 export interface Transaction {
-  id: string;
+  id?: string;
+  localId?: number;
   name: string;
-  category: TransactionCategory;
+  category: TransactionCategory | string;
   type: TransactionType;
   amount: number;
   date: string;
@@ -39,8 +40,9 @@ export interface Transaction {
 }
 
 export interface Budget {
-  id: string;
-  category: TransactionCategory;
+  id?: string;
+  localId?: number;
+  category: TransactionCategory | string;
   limit: number;
   spent: number;
   color: string;
@@ -49,12 +51,13 @@ export interface Budget {
 }
 
 export interface RecurringTransaction {
-  id: string;
+  id?: string;
+  localId?: number;
   name: string;
   amount: number;
   frequency: RecurringFrequency;
   nextDate: string;
-  category: TransactionCategory;
+  category: TransactionCategory | string;
   isActive: boolean;
   icon?: string;
 }

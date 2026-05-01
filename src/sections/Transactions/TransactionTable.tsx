@@ -34,8 +34,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {transactions.map((tx) => (
-              <tr key={tx.id} className="hover:bg-bg/30 transition-colors">
+            {transactions.map((tx, index) => (
+              <tr key={tx.id || tx.localId || index} className="hover:bg-bg/30 transition-colors">
                 <td className="py-4 px-6">
                   <p className="font-bold text-text-primary m-0">{tx.name}</p>
                   <p className="text-sm text-text-muted m-0 mt-0.5">
@@ -58,7 +58,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                   </Badge>
                 </td>
                 <td
-                  className={`py-4 px-6 text-right font-bold {tx.type === 'income' ? 'text-success' : 'text-text-primary'}`}
+                  className={`py-4 px-6 text-right font-bold ${tx.type === 'income' ? 'text-success' : 'text-text-primary'}`}
                 >
                   {tx.type === "income" ? "+" : "-"}
                   {tx.amount.toFixed(2)}
