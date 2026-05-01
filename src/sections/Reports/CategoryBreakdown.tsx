@@ -6,11 +6,25 @@ export interface CategorySpendingItem {
   name: string;
   value: number;
   color: string;
+  /** Optional: spending in the previous period for trend calculation */
+  prevValue?: number;
 }
 
 interface CategoryBreakdownProps {
   data: CategorySpendingItem[];
 }
+
+type Trend = "up" | "down" | "flat";
+
+const getTrend = (current: number, prev?: number): { trend: Trend; pct: string } => {
+  if (prev === undefined || prev === 0) return { trend: "flat", pct: "" };
+  const diff = ((current - prev) / prev) * 100;
+  if (Math.abs(diff) < 1) return { trend: "flat", pct: "" };
+  return {
+    trend: diff > 0 ? "up" : "down",
+    pct: `${Math.abs(diff).toFixed(0)}%`,
+  };
+};
 
 const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({ data }) => {
   const total = data.reduce((sum, item) => sum + item.value, 0);
@@ -31,9 +45,9 @@ const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({ data }) => {
 
       <div className="flex-1 overflow-y-auto">
         <ul className="divide-y divide-border">
-          {data.map((item, index) => {
+          {data.map((item) => {
             const percentage = ((item.value / total) * 100).toFixed(1);
-            const trend = index % 3 === 0 ? "up" : index % 3 === 1 ? "down" : "flat";
+            const { trend, pct } = getTrend(item.value, item.prevValue);
 
             return (
               <li
@@ -64,7 +78,11 @@ const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({ data }) => {
                     {trend === "up"   && <ArrowUpRight size={12} />}
                     {trend === "down" && <ArrowDownRight size={12} />}
                     {trend === "flat" && <Minus size={12} />}
-                    <span>{trend === "flat" ? "No change" : "vs last month"}</span>
+                    <span>
+                      {trend === "flat"
+                        ? item.prevValue !== undefined ? "No change" : "New"
+                        : `${pct} vs last month`}
+                    </span>
                   </div>
                 </div>
               </li>

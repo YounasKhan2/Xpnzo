@@ -1,17 +1,18 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../../../db/db";
 import RecurringTable from "../RecurringTable";
 import Button from "../../../components/Button";
 import Card from "../../../components/Card";
+import AddRecurringModal from "../AddRecurringModal";
 import { Plus, Wallet, RefreshCw } from "lucide-react";
 
 const RecurringView: React.FC = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const subscriptions = useLiveQuery(() =>
     db.recurring.filter((r) => !r.isDeleted).toArray()
   );
 
-  // Toggle active status using localId (the Dexie auto-increment PK)
   const handleToggleStatus = async (localId: number, isActive: boolean) => {
     await db.recurring.update(localId, { isActive, updatedAt: Date.now() });
   };
@@ -25,7 +26,7 @@ const RecurringView: React.FC = () => {
 
     const weeklyTotal = subscriptions
       .filter((s) => s.isActive && s.frequency === "weekly")
-      .reduce((sum, s) => sum + s.amount * 4.33, 0); // approx months per week
+      .reduce((sum, s) => sum + s.amount * 4.33, 0);
 
     return {
       monthly: monthlyTotal + weeklyTotal,
@@ -49,7 +50,9 @@ const RecurringView: React.FC = () => {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-text-primary m-0">Recurring Expenses</h2>
-        <Button variant="primary" icon={<Plus size={16} />}>Add Subscription</Button>
+        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setIsModalOpen(true)}>
+          Add Subscription
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -77,6 +80,8 @@ const RecurringView: React.FC = () => {
       </div>
 
       <RecurringTable subscriptions={subscriptions} onToggleStatus={handleToggleStatus} />
+
+      <AddRecurringModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 };

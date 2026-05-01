@@ -90,18 +90,25 @@ const ReportsView: React.FC = () => {
     return weeks;
   }, [currentMonthTxs]);
 
-  // ── Category spending ─────────────────────────────────────────────────────
+  // ── Category spending (current + last month for real trends) ────────────
   const categorySpendingData = useMemo(() => {
     const cats: Record<string, number> = {};
     currentMonthTxs.filter((t) => t.type === "expense").forEach((t) => {
       cats[t.category] = (cats[t.category] ?? 0) + t.amount;
     });
+
+    const lastCats: Record<string, number> = {};
+    lastMonthTxs.filter((t) => t.type === "expense").forEach((t) => {
+      lastCats[t.category] = (lastCats[t.category] ?? 0) + t.amount;
+    });
+
     return Object.entries(cats).map(([name, value], i) => ({
       name,
       value,
       color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+      prevValue: lastCats[name], // undefined if category didn't exist last month
     }));
-  }, [currentMonthTxs]);
+  }, [currentMonthTxs, lastMonthTxs]);
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (!transactions) {

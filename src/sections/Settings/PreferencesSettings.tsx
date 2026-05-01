@@ -1,8 +1,9 @@
 import React from "react";
 import Card from "../../components/Card";
 import Toggle from "../../components/Toggle";
-import type { LocalUserSettings } from "../../../types/Settings-types";
+import type { LocalUserSettings } from "../../db/db";
 import { db } from "../../db/db";
+import { useTheme } from "../../lib/useTheme";
 
 interface PreferencesSettingsProps {
   settings: LocalUserSettings | null;
@@ -14,6 +15,8 @@ type BooleanSettingsKey = keyof Pick<
 >;
 
 const PreferencesSettings: React.FC<PreferencesSettingsProps> = ({ settings }) => {
+  const [isDark, setIsDark] = useTheme();
+
   const patch = async (key: BooleanSettingsKey, value: boolean) => {
     if (!settings?.localId) return;
     await db.userSettings.update(settings.localId, { [key]: value, updatedAt: Date.now() });
@@ -36,8 +39,8 @@ const PreferencesSettings: React.FC<PreferencesSettingsProps> = ({ settings }) =
                 <p className="font-medium text-text-primary m-0">Dark Mode</p>
                 <p className="text-sm text-text-muted mt-0.5">Toggle dark theme for the application</p>
               </div>
-              {/* Dark mode is a UI-level concern — wired separately when theme switching is implemented */}
-              <Toggle checked={false} onChange={() => {}} />
+              {/* Dark mode is handled by useTheme hook */}
+              <Toggle checked={isDark} onChange={setIsDark} />
             </div>
 
             <div className="flex flex-col gap-1.5 mt-2">
@@ -51,7 +54,7 @@ const PreferencesSettings: React.FC<PreferencesSettingsProps> = ({ settings }) =
                     updatedAt: Date.now(),
                   });
                 }}
-                className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-white text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
+                className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-bg text-text-primary text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
               >
                 <option value="USD">USD ($) - US Dollar</option>
                 <option value="EUR">EUR (€) - Euro</option>

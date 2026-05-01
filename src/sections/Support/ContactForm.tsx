@@ -35,7 +35,7 @@ const ContactForm: React.FC = () => {
           <label className="text-sm font-semibold text-text-primary font-body">
             Subject
           </label>
-          <select className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-white text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10">
+          <select className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-bg text-text-primary text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10">
             <option value="general">General Inquiry</option>
             <option value="billing">Billing Issue</option>
             <option value="technical">Technical Support</option>
@@ -49,7 +49,7 @@ const ContactForm: React.FC = () => {
           </label>
           <textarea
             rows={5}
-            className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-white text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 resize-none"
+            className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-bg text-text-primary text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 resize-none"
             placeholder="How can we help you?"
           ></textarea>
         </div>

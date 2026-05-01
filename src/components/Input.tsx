@@ -48,7 +48,7 @@ const Input: React.FC<InputProps> = ({
         )}
         <input
           id={inputId}
-          className={`w-full py-2.5 ${iconPadding} border-[1.5px] rounded-md bg-white text-text-primary text-base font-body outline-none transition-all duration-150 focus:ring-[3px] placeholder-text-muted ${errorClasses}`}
+          className={`w-full py-2.5 ${iconPadding} border-[1.5px] rounded-md bg-bg text-text-primary text-base font-body outline-none transition-all duration-150 focus:ring-[3px] placeholder-text-muted ${errorClasses}`}
           {...props}
         />
         {icon && iconPosition === "right" && (

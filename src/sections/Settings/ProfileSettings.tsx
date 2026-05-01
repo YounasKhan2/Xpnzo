@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Card from "../../components/Card";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
@@ -15,9 +15,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
     email: settings?.email ?? "",
     phone: settings?.phone ?? "",
     dateOfBirth: settings?.dateOfBirth ?? "",
+    avatar: settings?.avatar ?? "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +30,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
         email: form.email,
         phone: form.phone,
         dateOfBirth: form.dateOfBirth,
+        avatar: form.avatar,
         updatedAt: Date.now(),
       };
       if (settings?.localId) {
@@ -51,6 +54,26 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 800 * 1024) {
+      alert("File is too large. Max size is 800KB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm({ ...form, avatar: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = () => {
+    setForm({ ...form, avatar: "" });
+  };
+
   const initials = form.name
     ? form.name.split(" ").map((n) => n[0]).join("").toUpperCase()
     : "?";
@@ -60,13 +83,28 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
       <h3 className="text-lg font-bold text-text-primary m-0 mb-6">Profile Information</h3>
 
       <div className="flex items-center gap-6 mb-8">
-        <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white text-2xl font-bold font-heading shadow-md">
-          {initials}
+        <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white text-2xl font-bold font-heading shadow-md overflow-hidden flex-shrink-0">
+          {form.avatar ? (
+            <img src={form.avatar} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            initials
+          )}
         </div>
         <div>
           <div className="flex gap-3">
-            <Button variant="primary" size="sm">Change Avatar</Button>
-            <Button variant="outline" size="sm">Remove</Button>
+            <input
+              type="file"
+              accept="image/png, image/jpeg, image/gif"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <Button type="button" variant="primary" size="sm" onClick={() => fileInputRef.current?.click()}>
+              Change Avatar
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handleRemoveAvatar} disabled={!form.avatar}>
+              Remove
+            </Button>
           </div>
           <p className="text-xs text-text-muted mt-2">JPG, GIF or PNG. Max size of 800K</p>
         </div>
@@ -94,7 +132,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
               type="tel"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-white text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
+              className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-bg text-text-primary text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
               placeholder="+1 (555) 000-0000"
             />
           </div>
@@ -104,7 +142,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
               type="date"
               value={form.dateOfBirth}
               onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
-              className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-white text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
+              className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-bg text-text-primary text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
             />
           </div>
         </div>

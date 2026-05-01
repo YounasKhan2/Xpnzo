@@ -5,6 +5,7 @@ export interface LocalUserSettings {
   phone?: string;
   currency: string;
   dateOfBirth?: string;
+  avatar?: string;
   // Security preferences
   twoFactorAuth: boolean;
   biometricLogin: boolean;

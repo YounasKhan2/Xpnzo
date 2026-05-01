@@ -1,12 +1,14 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../../../db/db";
 import Button from "../../../components/Button";
 import BudgetCard from "../BudgetCard";
 import BudgetSummary from "../BudgetSummary";
 import { Plus } from "lucide-react";
+import AddBudgetModal from "../AddBudgetModal";
 
 const BudgetsView: React.FC = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const budgets = useLiveQuery(() => db.budgets.toArray());
   const transactions = useLiveQuery(() => db.transactions.toArray());
 
@@ -19,8 +21,8 @@ const BudgetsView: React.FC = () => {
 
     return budgets.map(budget => {
       const spentThisMonth = transactions
-        .filter(t => 
-          t.category === budget.category && 
+        .filter(t =>
+          t.category === budget.category &&
           t.type === 'expense' &&
           new Date(t.date).getMonth() === currentMonth &&
           new Date(t.date).getFullYear() === currentYear
@@ -71,7 +73,7 @@ const BudgetsView: React.FC = () => {
         <h2 className="text-xl font-bold text-text-primary m-0">
           Your Budgets
         </h2>
-        <Button variant="primary" icon={<Plus size={16} />}>
+        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setIsModalOpen(true)}>
           Create Budget
         </Button>
       </div>
@@ -83,9 +85,12 @@ const BudgetsView: React.FC = () => {
           <BudgetCard key={budget.localId ?? budget.category} budget={budget} />
         ))}
 
-        {/* Add New Budget Card placeholder */}
-        <div className="h-full border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center p-8 text-center cursor-pointer hover:border-primary hover:bg-primary-light/50 transition-all group min-h-[200px]">
-          <div className="w-12 h-12 rounded-full bg-bg flex items-center justify-center text-text-muted group-hover:text-primary group-hover:bg-white mb-3 transition-colors shadow-sm">
+        {/* Add New Budget Card */}
+        <div
+          className="h-full border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center p-8 text-center cursor-pointer hover:border-primary hover:bg-primary-light/50 transition-all group min-h-[200px]"
+          onClick={() => setIsModalOpen(true)}
+        >
+          <div className="w-12 h-12 rounded-full bg-bg flex items-center justify-center text-text-muted group-hover:text-primary group-hover:bg-card mb-3 transition-colors shadow-sm">
             <Plus size={24} />
           </div>
           <p className="font-bold text-text-primary group-hover:text-primary transition-colors m-0">
@@ -96,6 +101,7 @@ const BudgetsView: React.FC = () => {
           </p>
         </div>
       </div>
+      <AddBudgetModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 };
