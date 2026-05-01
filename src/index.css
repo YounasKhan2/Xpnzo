@@ -1,0 +1,78 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-heading: "Manrope", system-ui, sans-serif;
+
+  /* Brand Colors */
+  --color-primary: #5b67ca;
+  --color-primary-light: #eef0fb;
+  --color-primary-hover: #4a56b8;
+  --color-primary-dark: #3a46a6;
+
+  /* Semantic Colors */
+  --color-success: #22c55e;
+  --color-success-light: #dcfce7;
+  --color-danger: #ef4444;
+  --color-danger-light: #fee2e2;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-info: #3b82f6;
+  --color-info-light: #dbeafe;
+
+  /* Neutrals */
+  --color-white: #ffffff;
+  --color-bg: #f4f6fa;
+  --color-card: #ffffff;
+  --color-sidebar: #1f2144;
+  --color-sidebar-hover: #2a2d5a;
+  --color-sidebar-active: rgba(91, 103, 202, 0.15);
+  --color-sidebar-text: #8b8fa8;
+  --color-sidebar-text-active: #ffffff;
+
+  /* Text Colors */
+  --color-text-primary: #1a1d3b;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+  --color-text-inverse: #ffffff;
+
+  /* Border */
+  --color-border: #e5e7eb;
+  --color-border-focus: #5b67ca;
+
+  /* Layout */
+  --spacing-sidebar-width: 240px;
+  --spacing-topbar-height: 68px;
+}
+
+/* Global Styles */
+@layer base {
+  body {
+    @apply font-sans bg-bg text-text-primary antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading font-bold text-text-primary;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted;
+  }
+}
