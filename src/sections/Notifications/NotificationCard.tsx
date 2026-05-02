@@ -39,11 +39,11 @@ const formatRelativeTime = (updatedAt: number): string => {
   const diff = Date.now() - updatedAt;
   const minutes = Math.floor(diff / 60_000);
   if (minutes < 1) return "Just now";
-  if (minutes < 60) return `{minutes}m ago`;
+  if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `{hours}h ago`;
+  if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
-  return `{days}d ago`;
+  return `${days}d ago`;
 };
 
 const formatDate = (updatedAt: number): string =>
@@ -67,7 +67,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
   return (
     <Card
       padding="md"
-      className={`relative transition-all duration-200 {
+      className={`relative transition-all duration-200 ${
         !notification.isRead
           ? "border-primary/30 bg-primary-light/10 shadow-md"
           : "opacity-80"
@@ -79,7 +79,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
 
       <div className="flex gap-4">
         <div
-          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 {getBgForType(notification.type)}`}
+          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${getBgForType(notification.type)}`}
         >
           {getIconForType(notification.type)}
         </div>
@@ -87,7 +87,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
         <div className="flex-1 min-w-0 pr-8">
           <div className="flex items-center justify-between mb-1">
             <h4
-              className={`text-base font-bold m-0 {
+              className={`text-base font-bold m-0 ${
                 !notification.isRead ? "text-text-primary" : "text-text-secondary"
               }`}
             >

@@ -31,7 +31,7 @@ const Input: React.FC<InputProps> = ({
     : "px-3.5";
 
   return (
-    <div className={`flex flex-col gap-1.5 {className}`}>
+    <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
         <label
           className="text-sm font-semibold text-text-primary font-body"
@@ -48,7 +48,7 @@ const Input: React.FC<InputProps> = ({
         )}
         <input
           id={inputId}
-          className={`w-full py-2.5 {iconPadding} border-[1.5px] rounded-md bg-bg text-text-primary text-base font-body outline-none transition-all duration-150 focus:ring-[3px] placeholder-text-muted {errorClasses}`}
+          className={`w-full py-2.5 ${iconPadding} border-[1.5px] rounded-md bg-bg text-text-primary text-base font-body outline-none transition-all duration-150 focus:ring-[3px] placeholder-text-muted ${errorClasses}`}
           {...props}
         />
         {icon && iconPosition === "right" && (

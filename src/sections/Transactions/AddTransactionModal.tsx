@@ -1,13 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
-import { db } from "../../db/db";
+import { db, type LocalTransaction } from "../../db/db";
 import { syncEngine } from "../../db/syncEngine";
+import { storage, BUCKET_IDS, Permission, Role } from "../../lib/appwrite";
+import { authService } from "../../services/auth";
+import { ID } from "appwrite";
+import { Paperclip, X, FileImage } from "lucide-react";
 
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editingTransaction?: LocalTransaction | null;
 }
 
 const CATEGORIES = [
@@ -25,20 +30,100 @@ const CATEGORIES = [
   "Other",
 ] as const;
 
+const defaultForm = () => ({
+  name: "",
+  amount: "",
+  date: new Date().toISOString().split("T")[0],
+  category: "",
+  type: "expense" as "expense" | "income",
+  account: "",
+  note: "",
+  receiptFileId: "",
+});
+
 const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   isOpen,
   onClose,
+  editingTransaction,
 }) => {
-  const [formData, setFormData] = useState({
-    name: "",
-    amount: "",
-    date: new Date().toISOString().split("T")[0],
-    category: "",
-    type: "expense" as "expense" | "income",
-    account: "",
-    note: "",
-  });
+  const isEditing = !!editingTransaction;
+  const [formData, setFormData] = useState(defaultForm());
   const [isLoading, setIsLoading] = useState(false);
+  const [receiptPreview, setReceiptPreview] = useState<string>("");
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [prevEditingTx, setPrevEditingTx] = useState(editingTransaction);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+  // Pre-fill form when editing (derived state pattern instead of useEffect)
+  if (editingTransaction !== prevEditingTx || isOpen !== prevIsOpen) {
+    setPrevEditingTx(editingTransaction);
+    setPrevIsOpen(isOpen);
+
+    if (editingTransaction) {
+      setFormData({
+        name: editingTransaction.name,
+        amount: String(editingTransaction.amount),
+        date: editingTransaction.date,
+        category: editingTransaction.category,
+        type: editingTransaction.type,
+        account: editingTransaction.account ?? "",
+        note: editingTransaction.note ?? "",
+        receiptFileId: editingTransaction.receiptFileId ?? "",
+      });
+      setReceiptPreview("");
+    } else {
+      setFormData(defaultForm());
+      setReceiptPreview("");
+    }
+  }
+
+  const handleReceiptUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File is too large. Max size is 5MB.");
+      return;
+    }
+
+    // Local preview
+    const reader = new FileReader();
+    reader.onloadend = () => setReceiptPreview(reader.result as string);
+    reader.readAsDataURL(file);
+
+    setIsUploadingReceipt(true);
+    try {
+      const user = await authService.getCurrentUser();
+      const permissions = user
+        ? [
+            Permission.read(Role.user(user.$id)),
+            Permission.delete(Role.user(user.$id)),
+          ]
+        : [];
+      const response = await storage.createFile(
+        BUCKET_IDS.receipts,
+        ID.unique(),
+        file,
+        permissions,
+      );
+      setFormData((prev) => ({ ...prev, receiptFileId: response.$id }));
+    } catch (err) {
+      console.error("Failed to upload receipt:", err);
+      alert("Receipt upload failed. The transaction will be saved without it.");
+      setReceiptPreview("");
+    } finally {
+      setIsUploadingReceipt(false);
+    }
+  };
+
+  const handleRemoveReceipt = () => {
+    setReceiptPreview("");
+    setFormData((prev) => ({ ...prev, receiptFileId: "" }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,58 +132,55 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setIsLoading(true);
     try {
       const now = Date.now();
-      const newLocalId = await db.transactions.add({
+      const txPayload = {
         name: formData.name,
         amount: parseFloat(formData.amount),
         category: formData.category,
         date: formData.date,
         type: formData.type,
-        status: "completed",
+        status: "completed" as const,
         account: formData.account || undefined,
         note: formData.note || undefined,
+        receiptFileId: formData.receiptFileId || undefined,
         isSynced: false,
         isDeleted: false,
         updatedAt: now,
-      });
+      };
 
-      // Queue for cloud sync
-      await db.syncQueue.add({
-        action: "create",
-        collection: "transactions",
-        payload: {
-          localId: newLocalId as number,
-          name: formData.name,
-          amount: parseFloat(formData.amount),
-          category: formData.category,
-          date: formData.date,
-          type: formData.type,
-          status: "completed",
-          account: formData.account || undefined,
-          note: formData.note || undefined,
-          isSynced: false,
-          isDeleted: false,
-          updatedAt: now,
-        },
-        retryCount: 0,
-        timestamp: now,
-      });
+      if (isEditing && editingTransaction?.localId) {
+        // Update existing
+        await db.transactions.update(editingTransaction.localId, txPayload);
+        if (editingTransaction.id) {
+          await db.syncQueue.add({
+            action: "update",
+            collection: "transactions",
+            payload: {
+              ...txPayload,
+              id: editingTransaction.id,
+              localId: editingTransaction.localId,
+            },
+            retryCount: 0,
+            timestamp: now,
+          });
+        }
+      } else {
+        // Create new
+        const newLocalId = await db.transactions.add(txPayload);
+        await db.syncQueue.add({
+          action: "create",
+          collection: "transactions",
+          payload: { ...txPayload, localId: newLocalId as number },
+          retryCount: 0,
+          timestamp: now,
+        });
+      }
 
-      // Attempt immediate sync if online
       syncEngine.startSync();
-
-      // Reset and close
-      setFormData({
-        name: "",
-        amount: "",
-        date: new Date().toISOString().split("T")[0],
-        category: "",
-        type: "expense",
-        account: "",
-        note: "",
-      });
+      setFormData(defaultForm());
+      setReceiptPreview("");
       onClose();
     } catch (error) {
-      console.error("Failed to add transaction:", error);
+      console.error("Failed to save transaction:", error);
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +191,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const labelClass = "text-sm font-semibold text-text-primary font-body";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Transaction" size="md">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEditing ? "Edit Transaction" : "Add Transaction"}
+      size="md"
+    >
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <Input
           label="Transaction Name"
@@ -130,8 +217,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             onChange={(e) =>
               setFormData({ ...formData, amount: e.target.value })
             }
-            icon={<span className="text-text-muted font-bold"></span>}
-            iconPosition="left"
             required
           />
           <div className="flex flex-col gap-1.5">
@@ -201,12 +286,69 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         <div className="flex flex-col gap-1.5">
           <label className={labelClass}>Notes (Optional)</label>
           <textarea
-            rows={3}
+            rows={2}
             value={formData.note}
             onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-            className={`{inputClass} resize-none`}
+            className={`${inputClass} resize-none`}
             placeholder="Add any additional details here..."
           />
+        </div>
+
+        {/* ── Receipt Upload ──────────────────────────────────────── */}
+        <div className="flex flex-col gap-2">
+          <label className={labelClass}>Receipt (Optional)</label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,application/pdf"
+            className="hidden"
+            onChange={handleReceiptUpload}
+          />
+
+          {receiptPreview || formData.receiptFileId ? (
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-bg">
+              {receiptPreview ? (
+                <img
+                  src={receiptPreview}
+                  alt="Receipt"
+                  className="w-12 h-12 object-cover rounded-md border border-border"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-md bg-primary-light flex items-center justify-center">
+                  <FileImage size={20} className="text-primary" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-text-primary m-0 truncate">
+                  {receiptPreview
+                    ? "Receipt uploaded"
+                    : `File: ${formData.receiptFileId.slice(0, 12)}…`}
+                </p>
+                <p className="text-xs text-text-muted">Receipt attached</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleRemoveReceipt}
+                className="p-1.5 rounded-md hover:bg-danger-light text-text-muted hover:text-danger transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingReceipt}
+              className="flex items-center gap-3 w-full p-3 border-2 border-dashed border-border rounded-lg text-text-muted hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all disabled:opacity-50"
+            >
+              <Paperclip size={18} />
+              <span className="text-sm font-medium">
+                {isUploadingReceipt
+                  ? "Uploading…"
+                  : "Attach receipt (PNG, JPG, PDF · max 5MB)"}
+              </span>
+            </button>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 mt-2 pt-5 border-t border-border">
@@ -219,7 +361,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={isLoading}>
-            Save Transaction
+            {isEditing ? "Save Changes" : "Save Transaction"}
           </Button>
         </div>
       </form>

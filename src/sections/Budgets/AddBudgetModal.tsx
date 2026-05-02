@@ -10,7 +10,7 @@ interface AddBudgetModalProps {
   onClose: () => void;
 }
 
-const CATEGORIES = [
+const PRESET_CATEGORIES = [
   "Food & Dining",
   "Shopping",
   "Transportation",
@@ -36,17 +36,7 @@ const PRESET_COLORS = [
 ];
 
 const PRESET_ICONS = [
-  "🛒",
-  "🍽️",
-  "🚗",
-  "🎬",
-  "🏠",
-  "💪",
-  "⚡",
-  "✈️",
-  "📚",
-  "💼",
-  "💳",
+  "🛒", "🍽️", "🚗", "🎬", "🏠", "💪", "⚡", "✈️", "📚", "💼", "💳",
 ];
 
 const inputClass =
@@ -55,22 +45,26 @@ const labelClass = "text-sm font-semibold text-text-primary font-body";
 
 const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
-    category: "",
+    categorySelect: "",
+    customCategory: "",
     limit: "",
     icon: "💳",
     color: "#5B67CA",
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  const isCustom = formData.categorySelect === "__custom__";
+  const finalCategory = isCustom ? formData.customCategory.trim() : formData.categorySelect;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.category || !formData.limit) return;
+    if (!finalCategory || !formData.limit) return;
 
     setIsLoading(true);
     try {
       const now = Date.now();
       const newLocalId = await db.budgets.add({
-        category: formData.category,
+        category: finalCategory,
         limit: parseFloat(formData.limit),
         spent: 0,
         color: formData.color,
@@ -86,7 +80,7 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
         collection: "budgets",
         payload: {
           localId: newLocalId as number,
-          category: formData.category,
+          category: finalCategory,
           limit: parseFloat(formData.limit),
           spent: 0,
           color: formData.color,
@@ -101,8 +95,7 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
       });
 
       syncEngine.startSync();
-
-      setFormData({ category: "", limit: "", icon: "💳", color: "#5B67CA" });
+      setFormData({ categorySelect: "", customCategory: "", limit: "", icon: "💳", color: "#5B67CA" });
       onClose();
     } catch (error) {
       console.error("Failed to add budget:", error);
@@ -118,21 +111,31 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
         <div className="flex flex-col gap-1.5">
           <label className={labelClass}>Category</label>
           <select
-            value={formData.category}
+            value={formData.categorySelect}
             onChange={(e) =>
-              setFormData({ ...formData, category: e.target.value })
+              setFormData({ ...formData, categorySelect: e.target.value, customCategory: "" })
             }
             className={inputClass}
             required
           >
             <option value="">Select Category</option>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+            {PRESET_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
             ))}
+            <option value="__custom__">✏️ Custom Category...</option>
           </select>
         </div>
+
+        {/* Custom category input — shown only when "Custom" is selected */}
+        {isCustom && (
+          <Input
+            label="Custom Category Name"
+            placeholder="e.g. Pet Care, Hobbies..."
+            value={formData.customCategory}
+            onChange={(e) => setFormData({ ...formData, customCategory: e.target.value })}
+            required
+          />
+        )}
 
         {/* Limit */}
         <Input
@@ -143,8 +146,6 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
           placeholder="0.00"
           value={formData.limit}
           onChange={(e) => setFormData({ ...formData, limit: e.target.value })}
-          icon={<span className="text-text-muted font-bold"></span>}
-          iconPosition="left"
           required
         />
 
@@ -157,11 +158,11 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
                 key={c}
                 type="button"
                 onClick={() => setFormData({ ...formData, color: c })}
-                className={`w-8 h-8 rounded-full border-2 transition-all {
+                className={`w-8 h-8 rounded-full border-2 transition-all ${
                   formData.color === c ? "border-text-primary scale-110" : "border-transparent"
                 }`}
                 style={{ backgroundColor: c }}
-                aria-label={`Color {c}`}
+                aria-label={`Color ${c}`}
               />
             ))}
           </div>
@@ -176,7 +177,7 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
                 key={icon}
                 type="button"
                 onClick={() => setFormData({ ...formData, icon })}
-                className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center border-2 transition-all {
+                className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center border-2 transition-all ${
                   formData.icon === icon
                     ? "border-primary bg-primary-light"
                     : "border-border bg-bg hover:border-primary/50"
@@ -189,18 +190,16 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Preview */}
-        {formData.category && formData.limit && (
+        {finalCategory && formData.limit && (
           <div className="p-3 rounded-lg bg-bg border border-border flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-              style={{ backgroundColor: `{formData.color}20` }}
+              style={{ backgroundColor: `${formData.color}20` }}
             >
               {formData.icon}
             </div>
             <div>
-              <p className="font-bold text-text-primary m-0">
-                {formData.category}
-              </p>
+              <p className="font-bold text-text-primary m-0">{finalCategory}</p>
               <p className="text-sm text-text-muted m-0">
                 Limit: {parseFloat(formData.limit || "0").toFixed(2)}/month
               </p>
@@ -213,12 +212,7 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
         )}
 
         <div className="flex justify-end gap-3 mt-2 pt-5 border-t border-border">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onClose}
-            disabled={isLoading}
-          >
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={isLoading}>

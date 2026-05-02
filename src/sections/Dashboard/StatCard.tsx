@@ -25,12 +25,12 @@ const StatCard: React.FC<StatCardProps> = ({
     <Card padding="md">
       <div className="flex items-start justify-between mb-4">
         <div
-          className={`w-12 h-12 rounded-full flex items-center justify-center {iconBgClass} {iconColorClass}`}
+          className={`w-12 h-12 rounded-full flex items-center justify-center ${iconBgClass} ${iconColorClass}`}
         >
           {icon}
         </div>
         <div
-          className={`flex items-center gap-1 text-sm font-semibold px-2 py-1 rounded-md {
+          className={`flex items-center gap-1 text-sm font-semibold px-2 py-1 rounded-md ${
             isPositive
               ? "bg-success-light text-green-700"
               : "bg-danger-light text-red-700"

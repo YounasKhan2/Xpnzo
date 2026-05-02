@@ -1,11 +1,10 @@
 import React, { useState, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "../../../db/db";
+import { db, type LocalTransaction } from "../../../db/db";
 import Button from "../../../components/Button";
 import TransactionTable from "../TransactionTable";
 import AddTransactionModal from "../AddTransactionModal";
 import { Plus, Filter, Download } from "lucide-react";
-import type { LocalTransaction } from "../../../db/db";
 
 // ─── Date range helpers ───────────────────────────────────────────────────────
 const getDateRange = (
@@ -89,6 +88,7 @@ const CATEGORIES = [
 // ─── Component ────────────────────────────────────────────────────────────────
 const TransactionsView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<LocalTransaction | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [dateRange, setDateRange] = useState("last30");
 
@@ -210,7 +210,7 @@ const TransactionsView: React.FC = () => {
             variant="primary"
             size="sm"
             icon={<Plus size={15} />}
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
           >
             <span className="hidden xs:inline">Add </span>Transaction
           </Button>
@@ -230,11 +230,15 @@ const TransactionsView: React.FC = () => {
         transactions
       </p>
 
-      <TransactionTable transactions={filtered} />
+      <TransactionTable
+        transactions={filtered}
+        onEdit={(tx) => { setEditingTransaction(tx); setIsModalOpen(true); }}
+      />
 
       <AddTransactionModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => { setIsModalOpen(false); setEditingTransaction(null); }}
+        editingTransaction={editingTransaction}
       />
     </div>
   );

@@ -52,7 +52,7 @@ const Button: React.FC<ButtonProps> = ({
       ? "opacity-50 cursor-not-allowed pointer-events-none"
       : "";
 
-  const classes = `{baseClasses} {sizeClasses[size]} {variantClasses[variant]} {widthClass} {disabledClass} {className}`;
+  const classes = `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${widthClass} ${disabledClass} ${className}`;
 
   return (
     <button className={classes} disabled={disabled || loading} {...props}>

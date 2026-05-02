@@ -35,12 +35,12 @@ const CategoryDonutChart: React.FC<CategoryDonutChartProps> = ({ data }) => {
               stroke="none"
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-{index}`} fill={entry.color} />
+                <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
             <Tooltip
               formatter={(value: unknown) => [
-                `{Number(value || 0).toFixed(2)}`,
+                `${Number(value || 0).toFixed(2)}`,
                 "Spent",
               ]}
               contentStyle={{

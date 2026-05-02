@@ -32,7 +32,7 @@ const Toggle: React.FC<ToggleProps> = ({
 
   return (
     <label
-      className={`inline-flex items-center gap-2.5 cursor-pointer select-none {
+      className={`inline-flex items-center gap-2.5 cursor-pointer select-none ${
         disabled ? "opacity-50 cursor-not-allowed" : ""
       }`}
     >
@@ -44,14 +44,14 @@ const Toggle: React.FC<ToggleProps> = ({
         onChange={(e) => onChange(e.target.checked)}
       />
       <span
-        className={`relative inline-flex items-center rounded-full transition-colors duration-200 flex-shrink-0 {
+        className={`relative inline-flex items-center rounded-full transition-colors duration-200 flex-shrink-0 ${
           currentSize.track
-        } {checked ? "bg-primary" : "bg-border"}`}
+        } ${checked ? "bg-primary" : "bg-border"}`}
       >
         <span
-          className={`rounded-full bg-white shadow-sm transition-transform duration-200 flex-shrink-0 {
+          className={`rounded-full bg-white shadow-sm transition-transform duration-200 flex-shrink-0 ${
             currentSize.thumb
-          } {checked ? currentSize.translate : "translate-x-0"}`}
+          } ${checked ? currentSize.translate : "translate-x-0"}`}
         />
       </span>
       {label && (

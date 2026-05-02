@@ -23,6 +23,7 @@ export interface LocalTransaction {
   note?: string;
   status: TransactionStatus;
   account?: string;
+  receiptFileId?: string; // Appwrite Storage file ID for attached receipt
   isSynced: boolean;
   isDeleted: boolean;
   updatedAt: number;

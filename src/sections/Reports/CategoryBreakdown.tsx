@@ -25,7 +25,7 @@ const getTrend = (
   if (Math.abs(diff) < 1) return { trend: "flat", pct: "" };
   return {
     trend: diff > 0 ? "up" : "down",
-    pct: `{Math.abs(diff).toFixed(0)}%`,
+    pct: `${Math.abs(diff).toFixed(0)}%`,
   };
 };
 
@@ -81,7 +81,7 @@ const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({ data }) => {
                     {item.value.toFixed(2)}
                   </span>
                   <div
-                    className={`flex items-center gap-0.5 text-xs font-semibold {
+                    className={`flex items-center gap-0.5 text-xs font-semibold ${
                       trend === "up"
                         ? "text-danger"
                         : trend === "down"
@@ -97,7 +97,7 @@ const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({ data }) => {
                         ? item.prevValue !== undefined
                           ? "No change"
                           : "New"
-                        : `{pct} vs last month`}
+                        : `${pct} vs last month`}
                     </span>
                   </div>
                 </div>

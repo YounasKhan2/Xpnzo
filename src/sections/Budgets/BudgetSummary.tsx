@@ -1,5 +1,6 @@
 import React from "react";
 import Card from "../../components/Card";
+import { Wallet, TrendingDown, TrendingUp, PiggyBank } from "lucide-react";
 
 interface BudgetSummaryStats {
   totalBudget: number;
@@ -13,62 +14,65 @@ interface BudgetSummaryProps {
 }
 
 const BudgetSummary: React.FC<BudgetSummaryProps> = ({ stats }) => {
-  const percentage = Math.min((stats.totalSpent / stats.totalLimit) * 100, 100);
+  const percentage = stats.totalLimit > 0
+    ? Math.min((stats.totalSpent / stats.totalLimit) * 100, 100)
+    : 0;
+
+  const kpis = [
+    {
+      title: "Total Budget",
+      value: stats.totalLimit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      icon: <Wallet size={22} />,
+      iconBg: "bg-primary-light",
+      iconColor: "text-primary",
+      sub: "Combined monthly limits",
+    },
+    {
+      title: "Total Spent",
+      value: stats.totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      icon: <TrendingDown size={22} />,
+      iconBg: "bg-danger-light",
+      iconColor: "text-danger",
+      sub: `${percentage.toFixed(1)}% of total budget`,
+    },
+    {
+      title: "Remaining",
+      value: stats.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      icon: <PiggyBank size={22} />,
+      iconBg: "bg-success-light",
+      iconColor: "text-success",
+      sub: `${(100 - percentage).toFixed(1)}% left to spend`,
+    },
+    {
+      title: "Budget Health",
+      value: percentage <= 80 ? "On Track" : percentage < 100 ? "Warning" : "Over Budget",
+      icon: <TrendingUp size={22} />,
+      iconBg: percentage <= 80 ? "bg-success-light" : percentage < 100 ? "bg-warning-light" : "bg-danger-light",
+      iconColor: percentage <= 80 ? "text-success" : percentage < 100 ? "text-warning" : "text-danger",
+      sub: `Overall spending status`,
+      isText: true,
+    },
+  ];
 
   return (
-    <Card
-      padding="lg"
-      className="bg-primary text-white overflow-hidden relative border-none"
-    >
-      <div className="absolute right-0 top-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-      <div className="absolute left-0 bottom-0 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4" />
-
-      <div className="relative z-10">
-        <h2 className="text-xl font-bold font-heading m-0 mb-6">
-          Total Budget Summary
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div>
-            <p className="text-primary-light text-sm font-medium mb-1">
-              Total Budget
-            </p>
-            <p className="text-3xl font-bold m-0">
-              {stats.totalLimit.toLocaleString()}
-            </p>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      {kpis.map((kpi) => (
+        <Card key={kpi.title} padding="md" className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-text-muted">{kpi.title}</p>
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${kpi.iconBg} ${kpi.iconColor}`}>
+              {kpi.icon}
+            </div>
           </div>
           <div>
-            <p className="text-primary-light text-sm font-medium mb-1">
-              Total Spent
+            <p className={`font-bold m-0 leading-tight ${kpi.isText ? "text-xl" : "text-2xl"} text-text-primary`}>
+              {kpi.value}
             </p>
-            <p className="text-3xl font-bold m-0">
-              {stats.totalSpent.toLocaleString()}
-            </p>
+            <p className="text-xs text-text-muted mt-1">{kpi.sub}</p>
           </div>
-          <div>
-            <p className="text-primary-light text-sm font-medium mb-1">
-              Remaining
-            </p>
-            <p className="text-3xl font-bold m-0">
-              {stats.remaining.toLocaleString()}
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <div className="flex justify-between text-sm font-medium mb-2 text-primary-light">
-            <span>{percentage.toFixed(1)}% Used</span>
-            <span>{(100 - percentage).toFixed(1)}% Left</span>
-          </div>
-          <div className="h-3 w-full bg-primary-dark rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white rounded-full transition-all duration-1000 ease-out"
-              style={{ width: `{percentage}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    </Card>
+        </Card>
+      ))}
+    </div>
   );
 };
 
