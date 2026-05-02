@@ -3,15 +3,48 @@ import Card from "../../components/Card";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import { Shield } from "lucide-react";
+import { authService } from "../../services/auth";
+import { AppwriteException } from "appwrite";
 
 const PasswordChange: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Implementation
+    setError(null);
+    setSuccess(false);
+
+    if (newPassword !== confirmPassword) {
+      setError("New passwords do not match.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await authService.updatePassword(newPassword, currentPassword);
+      setSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      if (err instanceof AppwriteException) {
+        setError(err.message);
+      } else {
+        setError("An unexpected error occurred.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -53,8 +86,11 @@ const PasswordChange: React.FC = () => {
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
 
-        <div className="pt-2 mt-2">
-          <Button type="submit" variant="primary">
+        <div className="pt-2 mt-2 flex items-center justify-between">
+          {error && <p className="text-sm font-semibold text-danger m-0">{error}</p>}
+          {success && <p className="text-sm font-semibold text-success m-0">Password updated successfully!</p>}
+          <div className="flex-1" />
+          <Button type="submit" variant="primary" loading={isLoading}>
             Update Password
           </Button>
         </div>

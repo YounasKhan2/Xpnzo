@@ -11,6 +11,14 @@ import { authService } from "../services/auth";
 
 const MAX_RETRIES = 3;
 
+type SyncEntity = {
+  localId?: number;
+  id?: string;
+  updatedAt?: number;
+  isSynced?: boolean;
+  isDeleted?: boolean;
+};
+
 // ─── Core Sync Logic (Push) ──────────────────────────────────────────────────
 
 const processSyncItem = async (item: SyncQueueItem): Promise<void> => {
@@ -49,6 +57,31 @@ const processSyncItem = async (item: SyncQueueItem): Promise<void> => {
     delete cloudPayload.isDeleted;
     delete cloudPayload.updatedAt;
 
+    // ── Pre-process ID and state ──
+    let docId = (item.payload as { id?: string }).id;
+    const localId = (item.payload as { localId?: number }).localId;
+
+    if (localId) {
+      const record = (await db[item.collection].get(localId)) as SyncEntity | undefined;
+      
+      // If record is missing locally and not already synced, we can't process it
+      if (!record && !docId) {
+        await db.syncQueue.delete(item.id!);
+        return;
+      }
+
+      // If it's a create/update but already deleted locally and never synced, skip it
+      if (!docId && record?.isDeleted && (item.action === "create" || item.action === "update")) {
+        await db.syncQueue.delete(item.id!);
+        return;
+      }
+
+      // Try to recover docId from local record if missing in payload
+      if (!docId && record?.id) {
+        docId = record.id;
+      }
+    }
+
     switch (item.action) {
       case "create": {
         const createdDoc = await databases.createDocument(
@@ -58,32 +91,31 @@ const processSyncItem = async (item: SyncQueueItem): Promise<void> => {
           cloudPayload,
           userPermissions,
         );
-        // Link the cloud ID back to our local record so it doesn't get duplicated on next pull
-        if (item.payload.localId) {
-          await db[item.collection].update(item.payload.localId, {
+        // Link the cloud ID back to our local record
+        if (localId) {
+          await db[item.collection].update(localId, {
             id: createdDoc.$id,
           });
         }
         break;
       }
       case "update":
-        if (item.payload.id) {
-          // Note: When updating, Appwrite also expects just the data, not the ID inside the payload
+        if (docId) {
           await databases.updateDocument(
             DATABASE_ID,
             collectionId,
-            item.payload.id,
+            docId,
             cloudPayload,
             userPermissions,
           );
         }
         break;
       case "delete":
-        if (item.payload.id) {
+        if (docId) {
           await databases.deleteDocument(
             DATABASE_ID,
             collectionId,
-            item.payload.id,
+            docId,
           );
         }
         break;
@@ -92,7 +124,6 @@ const processSyncItem = async (item: SyncQueueItem): Promise<void> => {
     // ── Success: remove from queue and mark synced in local DB ──
     await db.syncQueue.delete(item.id!);
 
-    const localId = (item.payload as { localId?: number }).localId;
     if (localId === undefined) return;
 
     switch (item.collection) {
@@ -133,14 +164,6 @@ const pushSync = async (): Promise<void> => {
 // ─── Core Sync Logic (Pull) ──────────────────────────────────────────────────
 
 import type { Table, UpdateSpec } from "dexie";
-
-type SyncEntity = {
-  localId?: number;
-  id?: string;
-  updatedAt?: number;
-  isSynced?: boolean;
-  isDeleted?: boolean;
-};
 
 const pullCollection = async <T extends SyncEntity>(
   collection: SyncCollection,

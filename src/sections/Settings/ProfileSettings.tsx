@@ -5,6 +5,7 @@ import Button from "../../components/Button";
 import type { LocalUserSettings } from "../../../types/Settings-types";
 import { db } from "../../db/db";
 import { storage, BUCKET_IDS, Permission, Role } from "../../lib/appwrite";
+import { syncEngine } from "../../db/syncEngine";
 import { ID } from "appwrite";
 import { authService } from "../../services/auth";
 
@@ -48,8 +49,15 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
       };
       if (settings?.localId) {
         await db.userSettings.update(settings.localId, patch);
+        await db.syncQueue.add({
+          action: "update",
+          collection: "userSettings",
+          payload: { ...settings, ...patch, localId: settings.localId },
+          retryCount: 0,
+          timestamp: Date.now(),
+        });
       } else {
-        await db.userSettings.add({
+        const fullNewSettings = {
           ...patch,
           currency: "USD",
           twoFactorAuth: false,
@@ -58,8 +66,17 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ settings }) => {
           emailDigest: true,
           budgetAlerts: true,
           marketingEmails: false,
+        };
+        const id = await db.userSettings.add(fullNewSettings);
+        await db.syncQueue.add({
+          action: "create",
+          collection: "userSettings",
+          payload: { ...fullNewSettings, localId: id },
+          retryCount: 0,
+          timestamp: Date.now(),
         });
       }
+      syncEngine.startSync();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {

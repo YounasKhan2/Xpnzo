@@ -36,6 +36,19 @@ export const authService = {
     return await account.get();
   },
 
+  // ── Security Features ──────────────────────────────────────────────────────
+  updatePassword: async (password: string, oldPassword?: string) => {
+    return await account.updatePassword(password, oldPassword);
+  },
+
+  getSessions: async () => {
+    return await account.listSessions();
+  },
+
+  deleteSession: async (sessionId: string) => {
+    return await account.deleteSession(sessionId);
+  },
+
   // ── Logout ─────────────────────────────────────────────────────────────────
   logout: async () => {
     try {

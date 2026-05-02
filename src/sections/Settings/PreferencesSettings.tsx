@@ -4,6 +4,7 @@ import Toggle from "../../components/Toggle";
 import type { LocalUserSettings } from "../../db/db";
 import { db } from "../../db/db";
 import { useTheme } from "../../lib/useTheme";
+import { syncEngine } from "../../db/syncEngine";
 
 interface PreferencesSettingsProps {
   settings: LocalUserSettings | null;
@@ -25,6 +26,14 @@ const PreferencesSettings: React.FC<PreferencesSettingsProps> = ({
       [key]: value,
       updatedAt: Date.now(),
     });
+    await db.syncQueue.add({
+      action: "update",
+      collection: "userSettings",
+      payload: { ...settings, [key]: value, localId: settings.localId },
+      retryCount: 0,
+      timestamp: Date.now(),
+    });
+    syncEngine.startSync();
   };
 
   const val = (key: BooleanSettingsKey, fallback: boolean) =>
@@ -66,6 +75,14 @@ const PreferencesSettings: React.FC<PreferencesSettingsProps> = ({
                     currency: e.target.value,
                     updatedAt: Date.now(),
                   });
+                  await db.syncQueue.add({
+                    action: "update",
+                    collection: "userSettings",
+                    payload: { ...settings, currency: e.target.value, localId: settings.localId },
+                    retryCount: 0,
+                    timestamp: Date.now(),
+                  });
+                  syncEngine.startSync();
                 }}
                 className="w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-bg text-text-primary text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
               >

@@ -3,22 +3,80 @@ import Card from "../../../components/Card";
 import Toggle from "../../../components/Toggle";
 import PasswordChange from "../PasswordChange";
 import DeviceSession from "../DeviceSession";
-import { mockLoginActivity } from "../../../data/mockData";
+import { authService } from "../../../services/auth";
+import type { LoginActivity } from "../../../../types/global-types";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../../../db/db";
+import { syncEngine } from "../../../db/syncEngine";
 
 const SecurityView: React.FC = () => {
-  const [settings, setSettings] = useState({
-    twoFactorAuth: true,
-    biometricLogin: false,
-    loginAlerts: true,
+  // Single-row settings store — always localId = 1
+  const settings = useLiveQuery(async () => {
+    const all = await db.userSettings.toArray();
+    return all[0] ?? null;
   });
 
-  const handleToggle = (key: keyof typeof settings, value: boolean) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
+  const [sessions, setSessions] = useState<LoginActivity[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+
+  React.useEffect(() => {
+    const loadSessions = async () => {
+      try {
+        const response = await authService.getSessions();
+        const mappedSessions: LoginActivity[] = response.sessions.map(
+          (s: {
+            $id: string;
+            osName: string;
+            clientName: string;
+            countryName: string;
+            ip: string;
+            $createdAt: string;
+            current: boolean;
+          }) => ({
+            id: s.$id,
+            device: `${s.osName || "Unknown OS"} - ${s.clientName || "Unknown Browser"}`,
+            location: s.countryName || "Unknown Location",
+            ip: s.ip,
+            date: new Date(s.$createdAt).toLocaleString(),
+            isCurrent: s.current,
+          }),
+        );
+        // Sort current session to top
+        mappedSessions.sort((a, b) => (b.isCurrent ? 1 : 0) - (a.isCurrent ? 1 : 0));
+        setSessions(mappedSessions);
+      } catch (err) {
+        console.error("Failed to load sessions:", err);
+      } finally {
+        setLoadingSessions(false);
+      }
+    };
+    loadSessions();
+  }, []);
+
+  const handleToggle = async (key: keyof Pick<typeof settings, "twoFactorAuth" | "biometricLogin" | "loginAlerts">, value: boolean) => {
+    if (!settings?.localId) return;
+    await db.userSettings.update(settings.localId, {
+      [key]: value,
+      updatedAt: Date.now(),
+    });
+    await db.syncQueue.add({
+      action: "update",
+      collection: "userSettings",
+      payload: { ...settings, [key]: value, localId: settings.localId },
+      retryCount: 0,
+      timestamp: Date.now(),
+    });
+    syncEngine.startSync();
   };
 
-  const handleRevokeSession = (id: string) => {
-    console.log("Revoking session:", id);
-    // In a real app, make API call to revoke session
+  const handleRevokeSession = async (id: string) => {
+    try {
+      await authService.deleteSession(id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      console.error("Failed to revoke session:", err);
+      alert("Failed to revoke session. Please try again.");
+    }
   };
 
   return (
@@ -48,7 +106,7 @@ const SecurityView: React.FC = () => {
                   </p>
                 </div>
                 <Toggle
-                  checked={settings.twoFactorAuth}
+                  checked={settings?.twoFactorAuth ?? false}
                   onChange={(v) => handleToggle("twoFactorAuth", v)}
                 />
               </div>
@@ -62,7 +120,7 @@ const SecurityView: React.FC = () => {
                   </p>
                 </div>
                 <Toggle
-                  checked={settings.biometricLogin}
+                  checked={settings?.biometricLogin ?? false}
                   onChange={(v) => handleToggle("biometricLogin", v)}
                 />
               </div>
@@ -76,7 +134,7 @@ const SecurityView: React.FC = () => {
                   </p>
                 </div>
                 <Toggle
-                  checked={settings.loginAlerts}
+                  checked={settings?.loginAlerts ?? true}
                   onChange={(v) => handleToggle("loginAlerts", v)}
                 />
               </div>
@@ -94,13 +152,17 @@ const SecurityView: React.FC = () => {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {mockLoginActivity.map((session) => (
-            <DeviceSession
-              key={session.id}
-              session={session}
-              onRevoke={handleRevokeSession}
-            />
-          ))}
+          {loadingSessions ? (
+            <p className="text-sm text-text-muted">Loading sessions...</p>
+          ) : (
+            sessions.map((session) => (
+              <DeviceSession
+                key={session.id}
+                session={session}
+                onRevoke={handleRevokeSession}
+              />
+            ))
+          )}
         </div>
       </div>
     </div>
