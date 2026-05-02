@@ -53,7 +53,7 @@ const SecurityView: React.FC = () => {
     loadSessions();
   }, []);
 
-  const handleToggle = async (key: keyof Pick<typeof settings, "twoFactorAuth" | "biometricLogin" | "loginAlerts">, value: boolean) => {
+  const handleToggle = async (key: "twoFactorAuth" | "biometricLogin" | "loginAlerts", value: boolean) => {
     if (!settings?.localId) return;
     await db.userSettings.update(settings.localId, {
       [key]: value,
