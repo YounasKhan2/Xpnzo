@@ -24,7 +24,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
     const trimmedName = name.trim();
 
     if (!trimmedEmail) return "Email address is required.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail))
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+/.test(trimmedEmail))
       return "Please enter a valid email address.";
     if (password.length < 8) return "Password must be at least 8 characters.";
     if (type === "signup") {

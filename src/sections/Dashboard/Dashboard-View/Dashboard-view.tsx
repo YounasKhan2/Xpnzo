@@ -8,7 +8,20 @@ import { Wallet, ArrowDownRight, ArrowUpRight, PiggyBank } from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 const pctChange = (current: number, last: number): number =>
   last === 0 ? 0 : parseFloat((((current - last) / last) * 100).toFixed(1));
@@ -19,7 +32,7 @@ const DashboardView: React.FC = () => {
   const transactions = useLiveQuery(() =>
     // NOTE: use .filter() not .where("isDeleted").equals(0) — IndexedDB key
     // comparison is strict-typed: stored boolean `false` !== number `0`.
-    db.transactions.filter((t) => !t.isDeleted).sortBy("date")
+    db.transactions.filter((t) => !t.isDeleted).sortBy("date"),
   );
 
   const { stats, cashFlowData } = useMemo(() => {
@@ -53,14 +66,17 @@ const DashboardView: React.FC = () => {
 
     const totalBalance = transactions.reduce(
       (s, t) => (t.type === "income" ? s + t.amount : s - t.amount),
-      0
+      0,
     );
 
     // ── Cash flow (last 6 months) ──
-    const monthMap: Record<string, { month: string; income: number; expense: number; order: number }> = {};
+    const monthMap: Record<
+      string,
+      { month: string; income: number; expense: number; order: number }
+    > = {};
     transactions.forEach((t) => {
       const d = new Date(t.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const key = `{d.getFullYear()}-{d.getMonth()}`;
       if (!monthMap[key]) {
         monthMap[key] = {
           month: MONTH_NAMES[d.getMonth()],
@@ -152,7 +168,9 @@ const DashboardView: React.FC = () => {
           <CashFlowChart data={cashFlowData} />
         </div>
         <div className="lg:col-span-1">
-          <RecentTransactions transactions={transactions.slice().reverse().slice(0, 5)} />
+          <RecentTransactions
+            transactions={transactions.slice().reverse().slice(0, 5)}
+          />
         </div>
       </div>
     </div>

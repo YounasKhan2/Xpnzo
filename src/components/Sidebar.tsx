@@ -23,19 +23,23 @@ interface NavItem {
 }
 
 const mainNav: NavItem[] = [
-  { label: "Dashboard",    path: "/",              icon: <LayoutDashboard size={18} /> },
-  { label: "Transactions", path: "/transactions",  icon: <ArrowLeftRight size={18} /> },
-  { label: "Budgets",      path: "/budgets",       icon: <PiggyBank size={18} /> },
-  { label: "Analytics",    path: "/analytics",     icon: <BarChart2 size={18} /> },
-  { label: "Recurring",    path: "/recurring",     icon: <RefreshCcw size={18} /> },
-  { label: "Reports",      path: "/reports",       icon: <FileText size={18} /> },
+  { label: "Dashboard", path: "/", icon: <LayoutDashboard size={18} /> },
+  {
+    label: "Transactions",
+    path: "/transactions",
+    icon: <ArrowLeftRight size={18} />,
+  },
+  { label: "Budgets", path: "/budgets", icon: <PiggyBank size={18} /> },
+  { label: "Analytics", path: "/analytics", icon: <BarChart2 size={18} /> },
+  { label: "Recurring", path: "/recurring", icon: <RefreshCcw size={18} /> },
+  { label: "Reports", path: "/reports", icon: <FileText size={18} /> },
 ];
 
 const accountNav: NavItem[] = [
   { label: "Notifications", path: "/notifications", icon: <Bell size={18} /> },
-  { label: "Security",      path: "/security",      icon: <Shield size={18} /> },
-  { label: "Settings",      path: "/settings",      icon: <Settings size={18} /> },
-  { label: "Support",       path: "/support",       icon: <HelpCircle size={18} /> },
+  { label: "Security", path: "/security", icon: <Shield size={18} /> },
+  { label: "Settings", path: "/settings", icon: <Settings size={18} /> },
+  { label: "Support", path: "/support", icon: <HelpCircle size={18} /> },
 ];
 
 interface SidebarProps {
@@ -52,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   };
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 px-3 py-2.5 rounded-md text-base font-medium transition-all duration-150 cursor-pointer ${
+    `flex items-center gap-3 px-3 py-2.5 rounded-md text-base font-medium transition-all duration-150 cursor-pointer {
       isActive
         ? "bg-sidebar-active text-white [&>span]:text-primary"
         : "text-sidebar-text hover:bg-sidebar-hover hover:text-white"
@@ -66,7 +70,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
           fixed top-0 left-0 h-full z-50 w-[var(--spacing-sidebar-width)] bg-sidebar flex flex-col py-5 flex-shrink-0 overflow-y-auto
           transition-transform duration-300 ease-in-out
           lg:relative lg:translate-x-0 lg:z-auto lg:h-screen lg:sticky lg:top-0
-          ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
+          {isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
         `}
       >
         {/* Logo + Mobile close button */}

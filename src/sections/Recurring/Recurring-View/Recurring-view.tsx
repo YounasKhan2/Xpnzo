@@ -51,7 +51,7 @@ const RecurringView: React.FC = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-text-primary m-0">Recurring Expenses</h2>
         <Button variant="primary" icon={<Plus size={16} />} onClick={() => setIsModalOpen(true)}>
-          Add Subscription
+          Add Recurring
         </Button>
       </div>
 

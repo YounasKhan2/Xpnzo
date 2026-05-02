@@ -37,7 +37,7 @@ const Modal: React.FC<ModalProps> = ({
       onClick={onClose}
     >
       <div
-        className={`bg-card rounded-2xl shadow-xl w-full max-h-[90vh] overflow-y-auto animate-[slideUp_0.3s_cubic-bezier(0.34,1.56,0.64,1)] ${sizeClasses[size]}`}
+        className={`bg-card rounded-2xl shadow-xl w-full max-h-[90vh] overflow-y-auto animate-[slideUp_0.3s_cubic-bezier(0.34,1.56,0.64,1)] {sizeClasses[size]}`}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (

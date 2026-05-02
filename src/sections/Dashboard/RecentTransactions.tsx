@@ -2,15 +2,7 @@ import React from "react";
 import Card from "../../components/Card";
 import Badge from "../../components/Badge";
 import type { Transaction } from "../../../types/global-types";
-import {
-  ShoppingBag,
-  Coffee,
-  Home,
-  Zap,
-  Heart,
-  Film,
-  ArrowRight,
-} from "lucide-react";
+import { ShoppingBag, Coffee, Home, Zap, Heart, Film } from "lucide-react";
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -63,9 +55,6 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({
         <h3 className="text-lg font-bold text-text-primary m-0">
           Recent Transactions
         </h3>
-        <button className="text-sm font-semibold text-primary flex items-center gap-1 hover:text-primary-hover transition-colors">
-          View All <ArrowRight size={14} />
-        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -90,7 +79,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({
               </div>
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 <span
-                  className={`text-base font-bold ${tx.type === 'income' ? 'text-success' : 'text-text-primary'}`}
+                  className={`text-base font-bold ${tx.type === "income" ? "text-success" : "text-text-primary"}`}
                 >
                   {tx.type === "income" ? "+" : "-"}
                   {tx.amount.toFixed(2)}

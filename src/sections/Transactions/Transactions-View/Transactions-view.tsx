@@ -8,9 +8,14 @@ import { Plus, Filter, Download } from "lucide-react";
 import type { LocalTransaction } from "../../../db/db";
 
 // ─── Date range helpers ───────────────────────────────────────────────────────
-const getDateRange = (range: string): { from: Date | null; to: Date | null } => {
+const getDateRange = (
+  range: string,
+): { from: Date | null; to: Date | null } => {
   const now = new Date();
-  const startOfDay = (d: Date) => { d.setHours(0, 0, 0, 0); return d; };
+  const startOfDay = (d: Date) => {
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
 
   if (range === "last30") {
     const from = new Date(now);
@@ -22,7 +27,7 @@ const getDateRange = (range: string): { from: Date | null; to: Date | null } => 
   }
   if (range === "lastMonth") {
     const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const to   = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    const to = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
     return { from, to };
   }
   if (range === "thisYear") {
@@ -33,23 +38,32 @@ const getDateRange = (range: string): { from: Date | null; to: Date | null } => 
 
 // ─── CSV Export ───────────────────────────────────────────────────────────────
 const exportToCSV = (transactions: LocalTransaction[]) => {
-  const header = ["Name", "Category", "Type", "Amount", "Date", "Status", "Account", "Note"];
+  const header = [
+    "Name",
+    "Category",
+    "Type",
+    "Amount",
+    "Date",
+    "Status",
+    "Account",
+    "Note",
+  ];
   const rows = transactions.map((t) => [
-    `"${t.name}"`,
-    `"${t.category}"`,
+    `"{t.name}"`,
+    `"{t.category}"`,
     t.type,
     t.amount.toFixed(2),
     t.date,
     t.status,
-    `"${t.account ?? ""}"`,
-    `"${t.note ?? ""}"`,
+    `"{t.account ?? ""}"`,
+    `"{t.note ?? ""}"`,
   ]);
   const csv = [header.join(","), ...rows.map((r) => r.join(","))].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `xpnzo-transactions-${new Date().toISOString().split("T")[0]}.csv`;
+  link.download = `xpnzo-transactions-{new Date().toISOString().split("T")[0]}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -58,19 +72,28 @@ const exportToCSV = (transactions: LocalTransaction[]) => {
 
 // ─── Categories list ──────────────────────────────────────────────────────────
 const CATEGORIES = [
-  "Food & Dining", "Shopping", "Transportation", "Entertainment",
-  "Housing", "Groceries", "Health & Fitness", "Utilities",
-  "Travel", "Education", "Income", "Other",
+  "Food & Dining",
+  "Shopping",
+  "Transportation",
+  "Entertainment",
+  "Housing",
+  "Groceries",
+  "Health & Fitness",
+  "Utilities",
+  "Travel",
+  "Education",
+  "Income",
+  "Other",
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const TransactionsView: React.FC = () => {
-  const [isModalOpen, setIsModalOpen]   = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [dateRange, setDateRange]       = useState("last30");
+  const [dateRange, setDateRange] = useState("last30");
 
   const transactions = useLiveQuery(() =>
-    db.transactions.orderBy("date").reverse().toArray()
+    db.transactions.orderBy("date").reverse().toArray(),
   );
 
   // Apply filters in-memory (no need to re-query, data is small)
@@ -79,10 +102,10 @@ const TransactionsView: React.FC = () => {
     const { from, to } = getDateRange(dateRange);
 
     return transactions.filter((t) => {
-      const matchCat = categoryFilter === "all" || t.category === categoryFilter;
+      const matchCat =
+        categoryFilter === "all" || t.category === categoryFilter;
       const d = new Date(t.date);
-      const matchDate =
-        (!from || d >= from) && (!to || d <= to);
+      const matchDate = (!from || d >= from) && (!to || d <= to);
       return matchCat && matchDate;
     });
   }, [transactions, categoryFilter, dateRange]);
@@ -111,11 +134,20 @@ const TransactionsView: React.FC = () => {
             >
               <option value="all">All Categories</option>
               {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </select>
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </div>
@@ -135,7 +167,14 @@ const TransactionsView: React.FC = () => {
               <option value="all">All Time</option>
             </select>
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </div>
@@ -148,7 +187,9 @@ const TransactionsView: React.FC = () => {
           {/* Active filter count badge */}
           {(categoryFilter !== "all" || dateRange !== "last30") && (
             <span className="text-xs bg-primary text-white font-bold px-2 py-0.5 rounded-full">
-              {(categoryFilter !== "all" ? 1 : 0) + (dateRange !== "last30" ? 1 : 0)} active
+              {(categoryFilter !== "all" ? 1 : 0) +
+                (dateRange !== "last30" ? 1 : 0)}{" "}
+              active
             </span>
           )}
         </div>
@@ -161,7 +202,7 @@ const TransactionsView: React.FC = () => {
             icon={<Download size={15} />}
             onClick={() => exportToCSV(filtered)}
             disabled={filtered.length === 0}
-            title={`Export ${filtered.length} transactions as CSV`}
+            title={`Export {filtered.length} transactions as CSV`}
           >
             <span className="hidden sm:inline">Export</span>
           </Button>
@@ -178,8 +219,15 @@ const TransactionsView: React.FC = () => {
 
       {/* Result count */}
       <p className="text-sm text-text-muted -mt-2">
-        Showing <span className="font-semibold text-text-primary">{filtered.length}</span> of{" "}
-        <span className="font-semibold text-text-primary">{transactions.length}</span> transactions
+        Showing{" "}
+        <span className="font-semibold text-text-primary">
+          {filtered.length}
+        </span>{" "}
+        of{" "}
+        <span className="font-semibold text-text-primary">
+          {transactions.length}
+        </span>{" "}
+        transactions
       </p>
 
       <TransactionTable transactions={filtered} />

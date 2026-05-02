@@ -55,7 +55,7 @@ const WeeklyBarChart: React.FC<WeeklyBarChartProps> = ({ data }) => {
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: "#9CA3AF" }}
-              tickFormatter={(value) => `${value}`}
+              tickFormatter={(value) => `{value}`}
             />
             <Tooltip
               cursor={{ fill: "rgba(91, 103, 202, 0.05)" }}
@@ -65,7 +65,7 @@ const WeeklyBarChart: React.FC<WeeklyBarChartProps> = ({ data }) => {
                 boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
               }}
               formatter={(value: unknown) => [
-                `${Number(value || 0).toLocaleString()}`,
+                `{Number(value || 0).toLocaleString()}`,
                 "Expense",
               ]}
             />

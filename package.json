@@ -46,7 +46,7 @@
   },
   "overrides": {
     "vite-plugin-pwa": {
-      "vite": "$vite"
+      "vite": "vite"
     }
   }
 }

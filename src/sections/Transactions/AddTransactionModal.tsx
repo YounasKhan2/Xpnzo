@@ -25,7 +25,10 @@ const CATEGORIES = [
   "Other",
 ] as const;
 
-const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClose }) => {
+const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const [formData, setFormData] = useState({
     name: "",
     amount: "",
@@ -124,8 +127,10 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             min="0"
             placeholder="0.00"
             value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-            icon={<span className="text-text-muted font-bold">$</span>}
+            onChange={(e) =>
+              setFormData({ ...formData, amount: e.target.value })
+            }
+            icon={<span className="text-text-muted font-bold"></span>}
             iconPosition="left"
             required
           />
@@ -134,7 +139,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             <input
               type="date"
               value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, date: e.target.value })
+              }
               className={inputClass}
               required
             />
@@ -146,7 +153,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             <label className={labelClass}>Type</label>
             <select
               value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as "expense" | "income" })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  type: e.target.value as "expense" | "income",
+                })
+              }
               className={inputClass}
             >
               <option value="expense">Expense</option>
@@ -157,13 +169,17 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             <label className={labelClass}>Category</label>
             <select
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, category: e.target.value })
+              }
               className={inputClass}
               required
             >
               <option value="">Select Category</option>
               {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </select>
           </div>
@@ -174,7 +190,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
           <input
             type="text"
             value={formData.account}
-            onChange={(e) => setFormData({ ...formData, account: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, account: e.target.value })
+            }
             className={inputClass}
             placeholder="e.g. Chase Checking, Amex Gold"
           />
@@ -186,13 +204,18 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
             rows={3}
             value={formData.note}
             onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-            className={`${inputClass} resize-none`}
+            className={`{inputClass} resize-none`}
             placeholder="Add any additional details here..."
           />
         </div>
 
         <div className="flex justify-end gap-3 mt-2 pt-5 border-t border-border">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isLoading}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={isLoading}>

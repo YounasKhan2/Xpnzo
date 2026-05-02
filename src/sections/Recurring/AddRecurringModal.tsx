@@ -26,17 +26,20 @@ const CATEGORIES = [
 ] as const;
 
 const FREQUENCIES: { value: RecurringFrequency; label: string }[] = [
-  { value: "daily",   label: "Daily" },
-  { value: "weekly",  label: "Weekly" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
   { value: "monthly", label: "Monthly" },
-  { value: "yearly",  label: "Yearly" },
+  { value: "yearly", label: "Yearly" },
 ];
 
 const inputClass =
   "w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-bg text-text-primary text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10";
 const labelClass = "text-sm font-semibold text-text-primary font-body";
 
-const AddRecurringModal: React.FC<AddRecurringModalProps> = ({ isOpen, onClose }) => {
+const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const [formData, setFormData] = useState({
     name: "",
     amount: "",
@@ -106,7 +109,6 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({ isOpen, onClose }
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add Subscription" size="md">
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-
         <Input
           label="Subscription Name"
           placeholder="e.g. Netflix, Gym Membership"
@@ -123,8 +125,10 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({ isOpen, onClose }
             min="0.01"
             placeholder="0.00"
             value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-            icon={<span className="text-text-muted font-bold">$</span>}
+            onChange={(e) =>
+              setFormData({ ...formData, amount: e.target.value })
+            }
+            icon={<span className="text-text-muted font-bold"></span>}
             iconPosition="left"
             required
           />
@@ -133,12 +137,17 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({ isOpen, onClose }
             <select
               value={formData.frequency}
               onChange={(e) =>
-                setFormData({ ...formData, frequency: e.target.value as RecurringFrequency })
+                setFormData({
+                  ...formData,
+                  frequency: e.target.value as RecurringFrequency,
+                })
               }
               className={inputClass}
             >
               {FREQUENCIES.map((f) => (
-                <option key={f.value} value={f.value}>{f.label}</option>
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
               ))}
             </select>
           </div>
@@ -149,13 +158,17 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({ isOpen, onClose }
             <label className={labelClass}>Category</label>
             <select
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, category: e.target.value })
+              }
               className={inputClass}
               required
             >
               <option value="">Select Category</option>
               {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </select>
           </div>
@@ -164,7 +177,9 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({ isOpen, onClose }
             <input
               type="date"
               value={formData.nextDate}
-              onChange={(e) => setFormData({ ...formData, nextDate: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, nextDate: e.target.value })
+              }
               className={inputClass}
               required
             />
@@ -178,15 +193,17 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({ isOpen, onClose }
               type="checkbox"
               className="sr-only"
               checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              onChange={(e) =>
+                setFormData({ ...formData, isActive: e.target.checked })
+              }
             />
             <div
-              className={`w-11 h-6 rounded-full transition-colors duration-200 ${
+              className={`w-11 h-6 rounded-full transition-colors duration-200 {
                 formData.isActive ? "bg-primary" : "bg-border"
               }`}
             />
             <div
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 {
                 formData.isActive ? "translate-x-5" : "translate-x-0"
               }`}
             />
@@ -205,19 +222,27 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({ isOpen, onClose }
             <div>
               <p className="font-bold text-text-primary m-0">{formData.name}</p>
               <p className="text-sm text-text-muted m-0 capitalize">
-                ${parseFloat(formData.amount || "0").toFixed(2)} · {formData.frequency}
+                {parseFloat(formData.amount || "0").toFixed(2)} ·{" "}
+                {formData.frequency}
               </p>
             </div>
-            <span className={`ml-auto text-xs font-bold px-2 py-1 rounded-full ${
+            <span
+              className={`ml-auto text-xs font-bold px-2 py-1 rounded-full {
               formData.isActive ? "bg-success-light text-success" : "bg-border text-text-muted"
-            }`}>
+            }`}
+            >
               {formData.isActive ? "Active" : "Paused"}
             </span>
           </div>
         )}
 
         <div className="flex justify-end gap-3 mt-2 pt-5 border-t border-border">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isLoading}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={isLoading}>

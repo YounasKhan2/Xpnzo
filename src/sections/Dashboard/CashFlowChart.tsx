@@ -73,7 +73,7 @@ const CashFlowChart: React.FC<CashFlowChartProps> = ({ data }) => {
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: "#9CA3AF" }}
-              tickFormatter={(value) => `${value / 1000}k`}
+              tickFormatter={(value) => `{value / 1000}k`}
             />
             <Tooltip
               contentStyle={{
@@ -82,7 +82,7 @@ const CashFlowChart: React.FC<CashFlowChartProps> = ({ data }) => {
                 boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
               }}
               formatter={(value: unknown) => [
-                `${Number(value || 0).toLocaleString()}`,
+                `{Number(value || 0).toLocaleString()}`,
                 "",
               ]}
             />

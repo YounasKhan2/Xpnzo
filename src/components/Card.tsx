@@ -28,7 +28,7 @@ const Card: React.FC<CardProps> = ({
 
   return (
     <div
-      className={`bg-card border border-border rounded-xl shadow-sm ${paddingClasses[padding]} ${hoverClasses} ${className}`}
+      className={`bg-card border border-border rounded-xl shadow-sm {paddingClasses[padding]} {hoverClasses} {className}`}
       onClick={onClick}
     >
       {children}

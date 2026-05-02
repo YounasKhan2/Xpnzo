@@ -40,7 +40,7 @@ const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-semibold rounded-full whitespace-nowrap ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+      className={`inline-flex items-center gap-1.5 font-semibold rounded-full whitespace-nowrap {sizeClasses[size]} {variantClasses[variant]} {className}`}
     >
       {dot && (
         <span className="w-1.5 h-1.5 rounded-full bg-current flex-shrink-0" />

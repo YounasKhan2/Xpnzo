@@ -150,13 +150,16 @@ const pullCollection = async <T extends SyncEntity>(
   if (!collectionId) return;
 
   try {
-    // Fetch all documents from Appwrite (could be optimized with lastSyncTime)
+    // Fetch all documents belonging to this user from Appwrite
     const response = await databases.listDocuments(DATABASE_ID, collectionId, [
       Query.limit(100),
     ]);
 
+    // Build a Set of all cloud IDs for quick lookup
+    const cloudIds = new Set(response.documents.map((d) => d.$id));
+
+    // ── Upsert: insert new / update changed ───────────────────────────────
     for (const doc of response.documents) {
-      // Find if we have it locally
       const localDoc = await localTable.where("id").equals(doc.$id).first();
 
       const parsedDoc = { ...doc } as Record<string, unknown>;
@@ -166,12 +169,10 @@ const pullCollection = async <T extends SyncEntity>(
       delete parsedDoc.$createdAt;
       delete parsedDoc.$updatedAt;
       delete parsedDoc.$permissions;
-
-      // Strip any polluted localId that might have accidentally synced to the cloud previously
+      // Strip any localId that may have accidentally been synced to the cloud
       delete parsedDoc.localId;
 
       if (!localDoc) {
-        // Doesn't exist locally, insert it
         await localTable.add({
           ...parsedDoc,
           id: doc.$id,
@@ -179,17 +180,29 @@ const pullCollection = async <T extends SyncEntity>(
           isDeleted: false,
         } as unknown as T);
       } else {
-        // Exists locally, resolve conflict by timestamp (Appwrite wins if newer or we don't track it locally)
         const localTime = localDoc.updatedAt || 0;
         const remoteTime = new Date(doc.$updatedAt).getTime() || 0;
+        if (remoteTime > localTime && localDoc.localId !== undefined) {
+          await localTable.update(localDoc.localId, {
+            ...parsedDoc,
+            isSynced: true,
+          } as unknown as UpdateSpec<T>);
+        }
+      }
+    }
 
-        if (remoteTime > localTime) {
-          if (localDoc.localId !== undefined) {
-            await localTable.update(localDoc.localId, {
-              ...parsedDoc,
-              isSynced: true,
-            } as unknown as UpdateSpec<T>);
-          }
+    // ── Purge: remove local records deleted on the server ─────────────────
+    // Find all local records that have a cloud ID (i.e. were previously synced)
+    // but whose ID is no longer present in the latest Appwrite response.
+    const allLocalSynced = await localTable
+      .filter((item) => !!item.id)
+      .toArray();
+
+    for (const localItem of allLocalSynced) {
+      if (localItem.id && !cloudIds.has(localItem.id)) {
+        // This record was deleted from Appwrite — remove it locally too
+        if (localItem.localId !== undefined) {
+          await localTable.delete(localItem.localId);
         }
       }
     }
@@ -197,6 +210,7 @@ const pullCollection = async <T extends SyncEntity>(
     console.error(`[Sync] Failed to pull collection ${collection}:`, err);
   }
 };
+
 
 const pullSync = async (): Promise<void> => {
   if (!navigator.onLine) return;

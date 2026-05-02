@@ -8,13 +8,16 @@ import type { NotificationFilter } from "../../../../types/Notifications-types";
 
 const NotificationsView: React.FC = () => {
   const notifications = useLiveQuery(() =>
-    db.notifications.orderBy("updatedAt").reverse().toArray()
+    db.notifications.orderBy("updatedAt").reverse().toArray(),
   );
 
   const [filter, setFilter] = useState<NotificationFilter["type"]>("all");
 
   const handleMarkRead = async (localId: number) => {
-    await db.notifications.update(localId, { isRead: true, updatedAt: Date.now() });
+    await db.notifications.update(localId, {
+      isRead: true,
+      updatedAt: Date.now(),
+    });
   };
 
   const handleMarkAllRead = async () => {
@@ -22,15 +25,18 @@ const NotificationsView: React.FC = () => {
     const unread = notifications.filter((n) => !n.isRead);
     await Promise.all(
       unread.map((n) =>
-        db.notifications.update(n.localId!, { isRead: true, updatedAt: Date.now() })
-      )
+        db.notifications.update(n.localId!, {
+          isRead: true,
+          updatedAt: Date.now(),
+        }),
+      ),
     );
   };
 
   const filteredNotifications = (notifications ?? []).filter((n) => {
-    if (filter === "unread")  return !n.isRead;
-    if (filter === "alerts")  return n.type === "alert";
-    if (filter === "system")  return n.type === "system";
+    if (filter === "unread") return !n.isRead;
+    if (filter === "alerts") return n.type === "alert";
+    if (filter === "system") return n.type === "system";
     return true;
   });
 
@@ -52,7 +58,9 @@ const NotificationsView: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold text-text-primary m-0">Notifications</h2>
+          <h2 className="text-xl font-bold text-text-primary m-0">
+            Notifications
+          </h2>
           {unreadCount > 0 && (
             <span className="bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full">
               {unreadCount} New
@@ -75,7 +83,7 @@ const NotificationsView: React.FC = () => {
         {(["all", "unread", "alerts", "system"] as const).map((f) => (
           <button
             key={f}
-            className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors capitalize ${
+            className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors capitalize {
               filter === f
                 ? "bg-primary-light text-primary"
                 : "text-text-secondary hover:text-text-primary hover:bg-bg"
@@ -103,7 +111,9 @@ const NotificationsView: React.FC = () => {
               <Bell size={28} className="text-text-muted" />
             </div>
             <div>
-              <p className="font-semibold text-text-primary m-0">All caught up!</p>
+              <p className="font-semibold text-text-primary m-0">
+                All caught up!
+              </p>
               <p className="text-sm text-text-muted mt-1">
                 {filter === "unread"
                   ? "No unread notifications."
