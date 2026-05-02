@@ -5,9 +5,12 @@ import Button from "../../components/Button";
 import { db } from "../../db/db";
 import { syncEngine } from "../../db/syncEngine";
 
+import type { LocalBudget } from "../../db/db";
+
 interface AddBudgetModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editingBudget?: LocalBudget | null;
 }
 
 const PRESET_CATEGORIES = [
@@ -36,14 +39,28 @@ const PRESET_COLORS = [
 ];
 
 const PRESET_ICONS = [
-  "🛒", "🍽️", "🚗", "🎬", "🏠", "💪", "⚡", "✈️", "📚", "💼", "💳",
+  "🛒",
+  "🍽️",
+  "🚗",
+  "🎬",
+  "🏠",
+  "💪",
+  "⚡",
+  "✈️",
+  "📚",
+  "💼",
+  "💳",
 ];
 
 const inputClass =
   "w-full py-2.5 px-3.5 border-[1.5px] border-border rounded-md bg-bg text-text-primary text-base font-body outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10";
 const labelClass = "text-sm font-semibold text-text-primary font-body";
 
-const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
+const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
+  isOpen,
+  onClose,
+  editingBudget,
+}) => {
   const [formData, setFormData] = useState({
     categorySelect: "",
     customCategory: "",
@@ -53,8 +70,36 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  const [prevEditingBudget, setPrevEditingBudget] = useState(editingBudget);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+  if (editingBudget !== prevEditingBudget || isOpen !== prevIsOpen) {
+    setPrevEditingBudget(editingBudget);
+    setPrevIsOpen(isOpen);
+    if (editingBudget && isOpen) {
+      const isPreset = PRESET_CATEGORIES.some(c => c === editingBudget.category);
+      setFormData({
+        categorySelect: isPreset ? editingBudget.category : "__custom__",
+        customCategory: isPreset ? "" : editingBudget.category,
+        limit: editingBudget.limit.toString(),
+        icon: editingBudget.icon,
+        color: editingBudget.color,
+      });
+    } else if (isOpen) {
+      setFormData({
+        categorySelect: "",
+        customCategory: "",
+        limit: "",
+        icon: "💳",
+        color: "#5B67CA",
+      });
+    }
+  }
+
   const isCustom = formData.categorySelect === "__custom__";
-  const finalCategory = isCustom ? formData.customCategory.trim() : formData.categorySelect;
+  const finalCategory = isCustom
+    ? formData.customCategory.trim()
+    : formData.categorySelect;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,23 +108,26 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
     try {
       const now = Date.now();
-      const newLocalId = await db.budgets.add({
-        category: finalCategory,
-        limit: parseFloat(formData.limit),
-        spent: 0,
-        color: formData.color,
-        icon: formData.icon,
-        status: "on-track",
-        isSynced: false,
-        isDeleted: false,
-        updatedAt: now,
-      });
 
-      await db.syncQueue.add({
-        action: "create",
-        collection: "budgets",
-        payload: {
-          localId: newLocalId as number,
+      if (editingBudget && editingBudget.localId) {
+        const updatedFields = {
+          category: finalCategory,
+          limit: parseFloat(formData.limit),
+          color: formData.color,
+          icon: formData.icon,
+          isSynced: false,
+          updatedAt: now,
+        };
+        await db.budgets.update(editingBudget.localId, updatedFields);
+        await db.syncQueue.add({
+          action: "update",
+          collection: "budgets",
+          payload: { localId: editingBudget.localId, ...updatedFields },
+          retryCount: 0,
+          timestamp: now,
+        });
+      } else {
+        const newLocalId = await db.budgets.add({
           category: finalCategory,
           limit: parseFloat(formData.limit),
           spent: 0,
@@ -89,13 +137,29 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
           isSynced: false,
           isDeleted: false,
           updatedAt: now,
-        },
-        retryCount: 0,
-        timestamp: now,
-      });
+        });
+
+        await db.syncQueue.add({
+          action: "create",
+          collection: "budgets",
+          payload: {
+            localId: newLocalId as number,
+            category: finalCategory,
+            limit: parseFloat(formData.limit),
+            spent: 0,
+            color: formData.color,
+            icon: formData.icon,
+            status: "on-track",
+            isSynced: false,
+            isDeleted: false,
+            updatedAt: now,
+          },
+          retryCount: 0,
+          timestamp: now,
+        });
+      }
 
       syncEngine.startSync();
-      setFormData({ categorySelect: "", customCategory: "", limit: "", icon: "💳", color: "#5B67CA" });
       onClose();
     } catch (error) {
       console.error("Failed to add budget:", error);
@@ -105,7 +169,12 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create Budget" size="md">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editingBudget ? "Edit Budget" : "Create Budget"}
+      size="md"
+    >
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
         {/* Category */}
         <div className="flex flex-col gap-1.5">
@@ -113,14 +182,20 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
           <select
             value={formData.categorySelect}
             onChange={(e) =>
-              setFormData({ ...formData, categorySelect: e.target.value, customCategory: "" })
+              setFormData({
+                ...formData,
+                categorySelect: e.target.value,
+                customCategory: "",
+              })
             }
             className={inputClass}
             required
           >
             <option value="">Select Category</option>
             {PRESET_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
             <option value="__custom__">✏️ Custom Category...</option>
           </select>
@@ -132,7 +207,9 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
             label="Custom Category Name"
             placeholder="e.g. Pet Care, Hobbies..."
             value={formData.customCategory}
-            onChange={(e) => setFormData({ ...formData, customCategory: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, customCategory: e.target.value })
+            }
             required
           />
         )}
@@ -159,7 +236,9 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
                 type="button"
                 onClick={() => setFormData({ ...formData, color: c })}
                 className={`w-8 h-8 rounded-full border-2 transition-all ${
-                  formData.color === c ? "border-text-primary scale-110" : "border-transparent"
+                  formData.color === c
+                    ? "border-text-primary scale-110"
+                    : "border-transparent"
                 }`}
                 style={{ backgroundColor: c }}
                 aria-label={`Color ${c}`}
@@ -212,11 +291,16 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({ isOpen, onClose }) => {
         )}
 
         <div className="flex justify-end gap-3 mt-2 pt-5 border-t border-border">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isLoading}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={isLoading}>
-            Create Budget
+            {editingBudget ? "Save Changes" : "Create Budget"}
           </Button>
         </div>
       </form>

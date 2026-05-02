@@ -1,12 +1,15 @@
 import React from "react";
 import Card from "../../components/Card";
 import type { Budget } from "../../../types/global-types";
+import { Pencil, Trash2 } from "lucide-react";
 
 interface BudgetCardProps {
   budget: Budget;
+  onEdit?: (budget: Budget) => void;
+  onDelete?: (budget: Budget) => void;
 }
 
-const BudgetCard: React.FC<BudgetCardProps> = ({ budget }) => {
+const BudgetCard: React.FC<BudgetCardProps> = ({ budget, onEdit, onDelete }) => {
   const percentage = Math.min((budget.spent / budget.limit) * 100, 100);
   const remaining = budget.limit - budget.spent;
   const isOver = remaining < 0;
@@ -43,6 +46,30 @@ const BudgetCard: React.FC<BudgetCardProps> = ({ budget }) => {
             </p>
           </div>
         </div>
+
+        {/* Actions Menu */}
+        {(onEdit || onDelete) && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onEdit && (
+              <button
+                className="w-8 h-8 rounded border-none bg-transparent flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-light/30 transition-colors cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); onEdit(budget); }}
+                title="Edit Budget"
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                className="w-8 h-8 rounded border-none bg-transparent flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger-light/30 transition-colors cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); onDelete(budget); }}
+                title="Delete Budget"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-auto">

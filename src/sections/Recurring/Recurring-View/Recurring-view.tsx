@@ -6,12 +6,41 @@ import Button from "../../../components/Button";
 import Card from "../../../components/Card";
 import AddRecurringModal from "../AddRecurringModal";
 import { Plus, Wallet, RefreshCw } from "lucide-react";
+import { syncEngine } from "../../../db/syncEngine";
+import type { LocalRecurring } from "../../../db/db";
 
 const RecurringView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRecurring, setEditingRecurring] = useState<LocalRecurring | null>(null);
+
   const subscriptions = useLiveQuery(() =>
     db.recurring.filter((r) => !r.isDeleted).toArray()
   );
+
+  const handleEditRecurring = (subscription: LocalRecurring) => {
+    setEditingRecurring(subscription);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteRecurring = async (subscription: LocalRecurring) => {
+    if (!subscription.localId) return;
+    if (window.confirm("Are you sure you want to delete this subscription?")) {
+      const now = Date.now();
+      await db.recurring.update(subscription.localId, {
+        isDeleted: true,
+        isSynced: false,
+        updatedAt: now,
+      });
+      await db.syncQueue.add({
+        action: "delete",
+        collection: "recurring",
+        payload: { localId: subscription.localId },
+        retryCount: 0,
+        timestamp: now,
+      });
+      syncEngine.startSync();
+    }
+  };
 
   const handleToggleStatus = async (localId: number, isActive: boolean) => {
     await db.recurring.update(localId, { isActive, updatedAt: Date.now() });
@@ -50,7 +79,7 @@ const RecurringView: React.FC = () => {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-text-primary m-0">Recurring Expenses</h2>
-        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setIsModalOpen(true)}>
+        <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setEditingRecurring(null); setIsModalOpen(true); }}>
           Add Recurring
         </Button>
       </div>
@@ -79,9 +108,18 @@ const RecurringView: React.FC = () => {
         </Card>
       </div>
 
-      <RecurringTable subscriptions={subscriptions} onToggleStatus={handleToggleStatus} />
+      <RecurringTable 
+        subscriptions={subscriptions} 
+        onToggleStatus={handleToggleStatus} 
+        onEdit={handleEditRecurring}
+        onDelete={handleDeleteRecurring}
+      />
 
-      <AddRecurringModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddRecurringModal 
+        isOpen={isModalOpen} 
+        onClose={() => { setIsModalOpen(false); setEditingRecurring(null); }} 
+        editingRecurring={editingRecurring}
+      />
     </div>
   );
 };

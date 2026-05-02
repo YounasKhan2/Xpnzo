@@ -11,17 +11,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On app startup: restore session from Appwrite cookie
+  // On app startup: restore session from Appwrite cookie or offline cache
   useEffect(() => {
     const checkSession = async () => {
+      // 1. Optimistic Offline Restore
+      const cachedUser = localStorage.getItem("xpnzo_user");
+      if (cachedUser) {
+        try {
+          setUser(JSON.parse(cachedUser));
+          setIsLoading(false); // Instantly unblock the UI!
+        } catch {
+          // Bad JSON
+        }
+      }
+
+      // 2. Server Validation (if online)
       try {
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
-        if (currentUser && navigator.onLine) {
+        localStorage.setItem("xpnzo_user", JSON.stringify(currentUser));
+        setIsLoading(false);
+        if (navigator.onLine) {
           syncEngine.pullSync().catch(console.error);
         }
-      } catch {
-        setUser(null);
+      } catch (error) {
+        // If the server explicitly says "Unauthorized" (401), the session expired.
+        // Wipe the offline cache and log out.
+        const err = error as { code?: number };
+        if (err?.code === 401) {
+          setUser(null);
+          localStorage.removeItem("xpnzo_user");
+        }
+        // Otherwise, it's a network error (offline). We do nothing!
+        // The cached user remains in state, allowing offline PWA access.
       } finally {
         setIsLoading(false);
       }
@@ -38,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const currentUser = await authService.getCurrentUser();
     if (!currentUser) throw new Error('Login succeeded but could not retrieve user profile.');
     setUser(currentUser);
+    localStorage.setItem("xpnzo_user", JSON.stringify(currentUser));
     // Pull latest cloud data into local DB for this user
     if (navigator.onLine) {
       syncEngine.pullSync().catch(console.error);
@@ -62,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await db.notifications.clear();
     await db.userSettings.clear();
     await db.syncQueue.clear();
+    localStorage.removeItem("xpnzo_user");
     setUser(null);
   }, []);
 

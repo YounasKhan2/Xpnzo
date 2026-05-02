@@ -33,11 +33,7 @@ export const authService = {
   // ── Get current user ───────────────────────────────────────────────────────
   // Returns null instead of throwing when there is no active session.
   getCurrentUser: async () => {
-    try {
-      return await account.get();
-    } catch {
-      return null;
-    }
+    return await account.get();
   },
 
   // ── Logout ─────────────────────────────────────────────────────────────────

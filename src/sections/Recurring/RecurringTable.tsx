@@ -3,16 +3,20 @@ import Card from "../../components/Card";
 import Toggle from "../../components/Toggle";
 import Badge from "../../components/Badge";
 import type { LocalRecurring } from "../../db/db";
-import { Calendar, CreditCard } from "lucide-react";
+import { Calendar, CreditCard, Pencil, Trash2 } from "lucide-react";
 
 interface RecurringTableProps {
   subscriptions: LocalRecurring[];
   onToggleStatus: (localId: number, isActive: boolean) => void;
+  onEdit: (subscription: LocalRecurring) => void;
+  onDelete: (subscription: LocalRecurring) => void;
 }
 
 const RecurringTable: React.FC<RecurringTableProps> = ({
   subscriptions,
   onToggleStatus,
+  onEdit,
+  onDelete,
 }) => {
   if (subscriptions.length === 0) {
     return (
@@ -47,7 +51,7 @@ const RecurringTable: React.FC<RecurringTableProps> = ({
                 Amount
               </th>
               <th className="py-4 px-6 font-semibold text-sm text-text-secondary text-right">
-                Status
+                Actions
               </th>
             </tr>
           </thead>
@@ -83,7 +87,7 @@ const RecurringTable: React.FC<RecurringTableProps> = ({
                   {sub.amount.toFixed(2)}
                 </td>
                 <td className="py-4 px-6 text-right">
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-end gap-1">
                     <Toggle
                       checked={sub.isActive}
                       onChange={(checked) =>
@@ -91,6 +95,21 @@ const RecurringTable: React.FC<RecurringTableProps> = ({
                       }
                       size="sm"
                     />
+                    <div className="w-px h-4 bg-border mx-2"></div>
+                    <button
+                      className="w-8 h-8 rounded border-none bg-transparent flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-light/30 transition-colors cursor-pointer"
+                      onClick={() => onEdit(sub)}
+                      title="Edit"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      className="w-8 h-8 rounded border-none bg-transparent flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger-light/30 transition-colors cursor-pointer"
+                      onClick={() => onDelete(sub)}
+                      title="Delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -132,11 +151,26 @@ const RecurringTable: React.FC<RecurringTableProps> = ({
                 <span className="font-bold text-sm text-text-primary">
                   {sub.amount.toFixed(2)}
                 </span>
-                <Toggle
-                  checked={sub.isActive}
-                  onChange={(checked) => onToggleStatus(sub.localId!, checked)}
-                  size="sm"
-                />
+                <div className="flex items-center gap-1">
+                  <Toggle
+                    checked={sub.isActive}
+                    onChange={(checked) => onToggleStatus(sub.localId!, checked)}
+                    size="sm"
+                  />
+                  <div className="w-px h-3 bg-border mx-1"></div>
+                  <button
+                    className="w-7 h-7 rounded border-none bg-transparent flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-light/30 transition-colors cursor-pointer"
+                    onClick={() => onEdit(sub)}
+                  >
+                    <Pencil size={12} />
+                  </button>
+                  <button
+                    className="w-7 h-7 rounded border-none bg-transparent flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger-light/30 transition-colors cursor-pointer"
+                    onClick={() => onDelete(sub)}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </div>
             </div>
             {/* Next payment row */}

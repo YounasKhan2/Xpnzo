@@ -5,10 +5,12 @@ import Button from "../../components/Button";
 import { db } from "../../db/db";
 import { syncEngine } from "../../db/syncEngine";
 import type { RecurringFrequency } from "../../../types/global-types";
+import type { LocalRecurring } from "../../db/db";
 
 interface AddRecurringModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editingRecurring?: LocalRecurring | null;
 }
 
 const CATEGORIES = [
@@ -39,6 +41,7 @@ const labelClass = "text-sm font-semibold text-text-primary font-body";
 const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
   isOpen,
   onClose,
+  editingRecurring,
 }) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -50,6 +53,33 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  const [prevEditingRecurring, setPrevEditingRecurring] = useState(editingRecurring);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+  if (editingRecurring !== prevEditingRecurring || isOpen !== prevIsOpen) {
+    setPrevEditingRecurring(editingRecurring);
+    setPrevIsOpen(isOpen);
+    if (editingRecurring && isOpen) {
+      setFormData({
+        name: editingRecurring.name,
+        amount: editingRecurring.amount.toString(),
+        category: editingRecurring.category,
+        frequency: editingRecurring.frequency,
+        nextDate: editingRecurring.nextDate,
+        isActive: editingRecurring.isActive,
+      });
+    } else if (isOpen) {
+      setFormData({
+        name: "",
+        amount: "",
+        category: "",
+        frequency: "monthly",
+        nextDate: new Date().toISOString().split("T")[0],
+        isActive: true,
+      });
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.amount || !formData.category) return;
@@ -57,23 +87,28 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
     setIsLoading(true);
     try {
       const now = Date.now();
-      const newLocalId = await db.recurring.add({
-        name: formData.name,
-        amount: parseFloat(formData.amount),
-        frequency: formData.frequency,
-        nextDate: formData.nextDate,
-        category: formData.category,
-        isActive: formData.isActive,
-        isSynced: false,
-        isDeleted: false,
-        updatedAt: now,
-      });
 
-      await db.syncQueue.add({
-        action: "create",
-        collection: "recurring",
-        payload: {
-          localId: newLocalId as number,
+      if (editingRecurring && editingRecurring.localId) {
+        const updatedFields = {
+          name: formData.name,
+          amount: parseFloat(formData.amount),
+          frequency: formData.frequency,
+          nextDate: formData.nextDate,
+          category: formData.category,
+          isActive: formData.isActive,
+          isSynced: false,
+          updatedAt: now,
+        };
+        await db.recurring.update(editingRecurring.localId, updatedFields);
+        await db.syncQueue.add({
+          action: "update",
+          collection: "recurring",
+          payload: { localId: editingRecurring.localId, ...updatedFields },
+          retryCount: 0,
+          timestamp: now,
+        });
+      } else {
+        const newLocalId = await db.recurring.add({
           name: formData.name,
           amount: parseFloat(formData.amount),
           frequency: formData.frequency,
@@ -83,21 +118,30 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
           isSynced: false,
           isDeleted: false,
           updatedAt: now,
-        },
-        retryCount: 0,
-        timestamp: now,
-      });
+        });
+
+        await db.syncQueue.add({
+          action: "create",
+          collection: "recurring",
+          payload: {
+            localId: newLocalId as number,
+            name: formData.name,
+            amount: parseFloat(formData.amount),
+            frequency: formData.frequency,
+            nextDate: formData.nextDate,
+            category: formData.category,
+            isActive: formData.isActive,
+            isSynced: false,
+            isDeleted: false,
+            updatedAt: now,
+          },
+          retryCount: 0,
+          timestamp: now,
+        });
+      }
 
       syncEngine.startSync();
 
-      setFormData({
-        name: "",
-        amount: "",
-        category: "",
-        frequency: "monthly",
-        nextDate: new Date().toISOString().split("T")[0],
-        isActive: true,
-      });
       onClose();
     } catch (error) {
       console.error("Failed to add recurring:", error);
@@ -107,7 +151,7 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Subscription" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={editingRecurring ? "Edit Subscription" : "Add Subscription"} size="md">
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <Input
           label="Subscription Name"
@@ -246,7 +290,7 @@ const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={isLoading}>
-            Add Subscription
+            {editingRecurring ? "Save Changes" : "Add Subscription"}
           </Button>
         </div>
       </form>

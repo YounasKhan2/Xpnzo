@@ -1,16 +1,45 @@
 import React, { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "../../../db/db";
+import { db, type LocalBudget } from "../../../db/db";
 import Button from "../../../components/Button";
 import BudgetCard from "../BudgetCard";
 import BudgetSummary from "../BudgetSummary";
 import { Plus } from "lucide-react";
 import AddBudgetModal from "../AddBudgetModal";
+import { syncEngine } from "../../../db/syncEngine";
+import type { Budget } from "../../../../types/global-types";
 
 const BudgetsView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const budgets = useLiveQuery(() => db.budgets.toArray());
-  const transactions = useLiveQuery(() => db.transactions.toArray());
+  const [editingBudget, setEditingBudget] = useState<LocalBudget | null>(null);
+  
+  const budgets = useLiveQuery(() => db.budgets.filter(b => !b.isDeleted).toArray());
+  const transactions = useLiveQuery(() => db.transactions.filter(t => !t.isDeleted).toArray());
+
+  const handleEditBudget = (budget: Budget) => {
+    setEditingBudget(budget as LocalBudget);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteBudget = async (budget: Budget) => {
+    if (!budget.localId) return;
+    if (window.confirm("Are you sure you want to delete this budget?")) {
+      const now = Date.now();
+      await db.budgets.update(budget.localId, {
+        isDeleted: true,
+        isSynced: false,
+        updatedAt: now,
+      });
+      await db.syncQueue.add({
+        action: "delete",
+        collection: "budgets",
+        payload: { localId: budget.localId },
+        retryCount: 0,
+        timestamp: now,
+      });
+      syncEngine.startSync();
+    }
+  };
 
   const enrichedBudgets = useMemo(() => {
     if (!budgets || !transactions) return null;
@@ -73,7 +102,7 @@ const BudgetsView: React.FC = () => {
         <h2 className="text-xl font-bold text-text-primary m-0">
           Your Budgets
         </h2>
-        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setIsModalOpen(true)}>
+        <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setEditingBudget(null); setIsModalOpen(true); }}>
           Create Budget
         </Button>
       </div>
@@ -82,13 +111,18 @@ const BudgetsView: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {enrichedBudgets.map((budget) => (
-          <BudgetCard key={budget.localId ?? budget.category} budget={budget} />
+          <BudgetCard 
+            key={budget.localId ?? budget.category} 
+            budget={budget} 
+            onEdit={handleEditBudget}
+            onDelete={handleDeleteBudget}
+          />
         ))}
 
         {/* Add New Budget Card */}
         <div
           className="h-full border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center p-8 text-center cursor-pointer hover:border-primary hover:bg-primary-light/50 transition-all group min-h-[200px]"
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => { setEditingBudget(null); setIsModalOpen(true); }}
         >
           <div className="w-12 h-12 rounded-full bg-bg flex items-center justify-center text-text-muted group-hover:text-primary group-hover:bg-card mb-3 transition-colors shadow-sm">
             <Plus size={24} />
@@ -101,7 +135,11 @@ const BudgetsView: React.FC = () => {
           </p>
         </div>
       </div>
-      <AddBudgetModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddBudgetModal 
+        isOpen={isModalOpen} 
+        onClose={() => { setIsModalOpen(false); setEditingBudget(null); }} 
+        editingBudget={editingBudget}
+      />
     </div>
   );
 };
