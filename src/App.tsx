@@ -1,3 +1,4 @@
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
@@ -25,7 +26,6 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return user ? <Navigate to="/" replace /> : <>{children}</>;
 };
 
-import React from "react";
 
 function AppRoutes() {
   return (

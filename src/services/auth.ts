@@ -2,12 +2,13 @@ import { ID, AppwriteException } from "appwrite";
 import { account } from "../lib/appwrite";
 
 export const authService = {
-  // Create account
+  // ── Register ───────────────────────────────────────────────────────────────
   register: async (email: string, pass: string, name: string) => {
     return account.create(ID.unique(), email, pass, name);
   },
 
-  // Login
+  // ── Login ──────────────────────────────────────────────────────────────────
+  // Handles the edge case where an orphaned session cookie blocks a new login.
   login: async (email: string, pass: string) => {
     try {
       return await account.createEmailPasswordSession(email, pass);
@@ -16,25 +17,21 @@ export const authService = {
         error instanceof AppwriteException &&
         error.type === "user_session_already_exists"
       ) {
-        // If a session is already active (orphaned), try to delete it and retry
+        // Orphaned session detected — attempt to clear it and retry once
         try {
           await account.deleteSession("current");
-          return await account.createEmailPasswordSession(email, pass);
         } catch {
-          console.warn(
-            "Failed to delete orphaned session, falling back to existing session.",
-          );
-          // If deletion fails, check if the existing session is valid
-          const existingUser = await account.get();
-          if (existingUser) return existingUser;
-          throw error;
+          // Deletion blocked (e.g. browser cookie policy) — swallow and retry anyway
         }
+        // Re-attempt the login after clearing (or attempting to clear) the session
+        return await account.createEmailPasswordSession(email, pass);
       }
       throw error;
     }
   },
 
-  // Get current user
+  // ── Get current user ───────────────────────────────────────────────────────
+  // Returns null instead of throwing when there is no active session.
   getCurrentUser: async () => {
     try {
       return await account.get();
@@ -43,7 +40,7 @@ export const authService = {
     }
   },
 
-  // Logout
+  // ── Logout ─────────────────────────────────────────────────────────────────
   logout: async () => {
     try {
       await account.deleteSession("current");
